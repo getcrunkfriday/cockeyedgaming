@@ -99,3 +99,4 @@ ENV/
 
 # mypy
 .mypy_cache/
+crunkybot/config.py
