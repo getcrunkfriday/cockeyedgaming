@@ -10,19 +10,29 @@ from __future__ import print_function
 
 from flask import Flask, render_template, request
 from flask_oauthlib.client import OAuth
+from flask_socketio import SocketIO, emit
 from flask import session, redirect, url_for, jsonify
 from threading import Lock
+from celery import Celery
 import requests
 import json
 import config
 import logging
 #from application import db
+import eventlet
+eventlet.monkey_patch()
+
 
 app = Flask(__name__)
-app.secret_key = config.SECRET_KEY
-file_handler = logging.FileHandler(filename='flask_error.log')
+app.config.from_pyfile("config.py")
+file_handler = logging.FileHandler(filename='crunkyerr.log')
 file_handler.setLevel(logging.WARNING)
 app.logger.addHandler(file_handler)
+
+# SocketIO + Celery config.
+socketio = SocketIO(app, async_mode="eventlet", message_queue=app.config["SOCKETIO_REDIS_URL"])
+celery = Celery(app.name, broker=app.config["CELERY_BROKER_URL"])
+celery.conf.update(app.config)
 
 oauth = OAuth()
 
@@ -36,6 +46,26 @@ twitch = oauth.remote_app('twitch',
                           consumer_secret=config.TWITCH_SECRET,
                           request_token_params={'scope': ["user_read", "channel_check_subscription"]}
                           )
+
+@celery.task()
+def background_task(url):
+        local_socketio=SocketIO(message_queue=url)
+        local_socketio.emit('my_response', {'data': 'Background test starting...'}, namespace="\test")
+        time.sleep(10)
+        local_socketio.emit('my_response', {'data': 'Background test complete...'}, namespace="\test")
+
+@app.route("/bg")
+def start_background_thread():
+        background_task.delay(app.config['SOCKETIO_REDIS_URL'])
+        return 'Started'
+
+@socketio.on("my event", namespace="/test")
+def test_message(message):
+        emit("my response", {"data": 'Backend saw"' + message['data'] + '" from the front end'})
+
+@app.route("/index2")
+def index2():
+        return render_template("index2.html")
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/index', methods=['GET', 'POST'])
@@ -74,13 +104,13 @@ def authorized():
             request.args['error_description']
         )
     session['twitch_token'] = (resp['access_token'], '')
-    return redirect(url_for('index'))
+    return redirect(url_for('index', _external=True))
 
 
 @app.route('/logout')
 def logout():
 	session.pop('twitch_token', None)
-	return redirect(url_for('index'))
+	return redirect(url_for('index', _external=True))
 
-if __name__ == '__main__':
-    app.run( debug = True)
+#if __name__ == '__main__':
+#    socketio.run(app,host="http://127.0.0.1:80",debug = True)
