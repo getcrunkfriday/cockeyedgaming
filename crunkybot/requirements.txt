@@ -16,6 +16,8 @@ boto==2.28.0
 websocket-client==0.47.0
 lxml==4.2.0
 eventlet
+gunicorn
 celery
 python-engineio
 python-socketio
+redis
