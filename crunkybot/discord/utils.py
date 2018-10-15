@@ -4,7 +4,7 @@ import config
 
 ydl_info_options={'outtmpl': '%(id)s %(title)s'}
 ydl_download_options={
-	'outtmpl': config.MUSIC_DL_LOCATION+'%(id)s %(title)s.%(ext)s',
+	'outtmpl': config.MUSIC_DL_LOCATION+'%(id)s.%(ext)s',
 	'format': 'bestaudio/best',
 	'postprocessors': [{
 		'key': 'FFmpegExtractAudio',
