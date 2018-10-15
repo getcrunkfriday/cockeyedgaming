@@ -2,7 +2,8 @@ import discord
 import config
 import re
 import utils
-import sqlite3
+import time
+import sqlite3 as sql
 
 client = discord.Client()
 youtube_re_str="(http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)|(http(s)?://www\.youtube\.com/watch/([-A-Za-z0-9_])+)|(http(s)?://youtu\.be/([-A-Za-z0-9_])+)|(http(s)://m\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)"
@@ -36,7 +37,13 @@ def parse_youtube_message(message):
 				add_to_database(vidid,title,message.author.name)
 
 def add_to_database(vidid,title,added_by):
-	
+	conn=sql.connect(config.DB_LOCATION)
+	c=conn.cursor()
+	c.execute('''CREATE TABLE IF NOT EXISTS playlist (id INTEGER PRIMARY KEY, playlist_id INTEGER, youtube_id TEXT, title TEXT, file_location TEXT, user_added TEXT, date_added TEXT, num_plays INTEGER)''')
+	sql_str="INSERT INTO playlist(playlist_id,youtube_id,title,file_location,user_added,date_added,num_plays) VALUES (?,?,?,?,?,?,?)"
+	c.execute(sql_str,(config.DB_PLAYLIST_ID,vidid,title,config.MUSIC_DL_LOCATION+vidid+".mp3",added_by,time.strftime("%Y-%m-%d"),0))
+	conn.commit()
+	print("Committing...")
 
 client.run(config.DISCORD_TOKEN)
 
