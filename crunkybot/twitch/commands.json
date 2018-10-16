@@ -1,0 +1,46 @@
+{
+	"commands" : [
+		{
+			"command": "addchat",
+			"command_type": "CHAT",
+			"num_args": "2",
+			"arguments": "command_name,chat_text",
+			"permission": "MODERATOR",
+			"action" : "add_chatcomm(%s,%command_name,%chat_text)"
+		},
+		{
+			"command": "remchat",
+			"command_type": "CHAT",
+			"num_args": "1",
+			"arguments": "command_name",
+			"permission": "MODERATOR",
+			"action" : "remove_chatcomm(%s,%command_name)"
+
+		},
+		{
+			"command": "addso",
+			"command_type": "CHAT",
+			"num_args": "4",
+			"arguments": "command_name,so_user,twitch_clip,chat_text",
+			"permission": "MODERATOR",
+			"action" : "add_shoutout(%s,%command_name,%so_user,%twitch_clip,%chat_text)"
+		},
+		{
+			"command": "remso",
+			"command_type": "CHAT",
+			"num_args": "1",
+			"arguments": "so_user",
+			"permission": "MODERATOR",
+			"action" : "remove_shoutout(%s,%so_user)"
+		},
+		{
+			"command": "addcomm",
+			"command_type": "CUSTOM",
+			"num_args": "2",
+			"arguments": "command_name,action_function",
+			"permission": "OWNER",
+			"action": "add_command(%s,%u,%command_name,%action_function)"
+		}
+	]
+
+}
