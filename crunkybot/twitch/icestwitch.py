@@ -4,7 +4,7 @@ from random import shuffle
 
 #global playlist,requests,current_track
 #global db,con,cur
-db="/home/andrew/Git/cnbtwitchbot/dbs/crunky.db"
+db="/home/andrew/dbs/crunky.db"
 con=sqlite3.connect(db)
 cur=con.cursor()
 tplaylist=[]
