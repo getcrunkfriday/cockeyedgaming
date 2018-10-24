@@ -1,12 +1,15 @@
 import sqlite3
+import sys
 import unicodedata
 from random import shuffle
 
+sys.path.append("/home/andrew/Git/cockeyedgaming/crunkybot/twitch")
+import dbutils as db
+
 #global playlist,requests,current_track
 #global db,con,cur
-db="/home/andrew/dbs/crunky.db"
-con=sqlite3.connect(db)
-cur=con.cursor()
+db_location="/home/andrew/dbs/crunky.db"
+music_db=db.MusicDB(db_location)
 tplaylist=[]
 trequests=[]
 tplaylist_id=0
@@ -14,16 +17,9 @@ tcurrent_track=""
 tuser_added=""
 
 def ices_init():
-    global cur
-    global con
-    cur.execute('''CREATE TABLE IF NOT EXISTS requests (id INTEGER PRIMARY KEY, youtube_id TEXT, title TEXT, file_location TEXT, user_added TEXT, date_added TEXT)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS playlist_requests (id INTEGER PRIMARY KEY, playlist_id INTEGER)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS playlist (id INTEGER PRIMARY KEY, playlist_id INTEGER, youtube_id TEXT, title TEXT, file_location TEXT, user_added TEXT, date_added TEXT)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS playlists (id INTEGER PRIMARY KEY, playlist_name TEXT, user_added TEXT)''')
-    con.commit()
-    cur.execute('''SELECT * FROM playlist''')
-    rows=cur.fetchall()
-    tplaylist=[(row[2],row[3]) for row in rows]
+    global music_db
+    tracks=music_db.get_tracks(tplaylist_id)
+    tplaylist=[(track["title_"],track["file_location_"]) for track in tracks]
     shuffle(tplaylist)
     #for t in tplaylist:
     #    print t
@@ -45,39 +41,28 @@ def ices_get_metadata():
 
 def ices_shutdown():
     #global db,con,cur
-    cur.execute('''DROP TABLE requests''')
-    con.commit()
+    music_db.purge_requests()
     return 1
 
 def ices_get_next():
     global tplaylist
     global trequests
     global tcurrent_track
+    global music_db
     # Check playlist requests.
-    cur.execute('''SELECT  * FROM playlist_requests''')
-    row=cur.fetchone()
-    if row:
-        playlist_id=row[1]
-        cur.execute('''DELETE FROM playlist_requests WHERE playlist_id=?''', (playlist_id,))
-        con.commit()
-        cur.execute('''SELECT * FROM playlist WHERE playlist_id=?''', (playlist_id,))
-        pl_rows=cur.fetchall()
-        tplaylist=[(row[3],row[4]) for r in pl_rows]
+    new_pl=music_db.pop_playlist_request()
+    if new_pl:
+        tplaylist=[(track['title_'],track['file_location_']) for track in new_pl]
         shuffle(tplaylist)
         tplaylist_id=playlist_id
     # Check request table.
-    cur.execute('''SELECT * FROM requests''')
-    rows=cur.fetchall()
+    requests=music_db.get_track_requests()
     next_track = None
     # If there are any requests:
-    if rows:
-        for row in rows:
+    if requests:
+        for track in requests:
             # Removes the current request from the DB.
-            cur.execute('''DELETE FROM requests WHERE id=?''', (row[0],))
-            new_tuple=tuple([x for x in row[1:]]+[0])
-            print new_tuple
-            con.commit()
-            trequests.append((row[2],row[3],row[4]))
+            trequests.append((track["title_"],track["file_location_"],track["user_added_"]))
     # If I have a request, make that the next track...
     if trequests:
         track=trequests.pop(0)
@@ -92,9 +77,8 @@ def ices_get_next():
     # Shuffle the playlist.
     else:
         print "Reshuffling playlist."
-        cur.execute('''SELECT * FROM playlist WHERE playlist_id=?''',(tplaylist_id,))
-        rows=cur.fetchall()
-        tplaylist=[(row[3],row[4]) for row in rows]
+        tracks=music_db.get_tracks(tplaylist_id)
+        tplaylist=[(track["title_"],track["file_location_"]) for track in tracks]
         shuffle(tplaylist)
         track=tplaylist.pop()
         tcurrent_track=track[0]+",cockeyedgaming"

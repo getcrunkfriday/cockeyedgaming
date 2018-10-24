@@ -16,31 +16,31 @@ base_commands = {
     # Text-based commands
     #"!streamote": lambda s,**kw : utils.chat(s,"Join us for Streamline bingo at: http://streamote.tv/cockeyedgaming"),
     #"!streamrpg": lambda s,**kw : utils.chat(s,"I'm sorry, are we boring you?! Fine, here: http://streamrpg.com/cockeyedgaming"),
-    "insult"   : lambda s,u,m,**kw : utils.insult(s,u,m,insults),
+    #"insult"   : lambda s,u,m,**kw : utils.insult(s,u,m,insults),
     #"!opponent" : lambda s,**kw : utils.chat(s,"We are playing Yunalescka (https://twitch.tv/yunalescka) in the HotStreams Tourney! Give them a follow!"),
     #"!multi"    : lambda s,**kw : utils.chat(s,"Watch both teams... at the saaaame tiiime! https://multistre.am/cockeyedgaming/yunalescka/layout4/"),
     #"!race" : lambda s,**kw : utils.chat(s,"Watch the full race at: https://multistre.am/cockeyedgaming/ashplissken/layout3/"),
     #"!recipe"   : lambda s,**kw : utils.chat(s, "The \"Dirty Banana\" recipe can be found here: https://www.thespruce.com/dirty-banana-4133904."),
     #"!celebrate" : lambda s,**kw : utils.chat(s, "Come celebrate 200+ followers with us this Saturday! What's planned? Check http://bit.ly/2u9Ps9P !"),
     # Raffle commands
-    "raffle"   : lambda s,u,**kw : utils.raffle(s,u),
-    "rafflestop" : lambda s,u,**kw : utils.raffle_stop(s,u),
-    "raffledraw" : lambda s,u,**kw : utils.raffle_draw(s,u),
-    "rafflestart": lambda s,u,m,**kw : utils.raffle_start(s,u,m),
+    #"raffle"   : lambda s,u,**kw : utils.raffle(s,u),
+    #"rafflestop" : lambda s,u,**kw : utils.raffle_stop(s,u),
+    #"raffledraw" : lambda s,u,**kw : utils.raffle_draw(s,u),
+    #"rafflestart": lambda s,u,m,**kw : utils.raffle_start(s,u,m),
     # Queue commands
     #"!queue"    : lambda s,u,**kw : utils.add_to_queue(s,u),
     #"!popqueue" : lambda s,u,m,**kw : utils.pop_queue(s,u,m),
     #"!currqueue": lambda s,**kw   : utils.get_queue(s),
     # Music commands
-    "sr"         : lambda s,u,m,**kw : song_request(s,u,m),
-    "currentsong"   : lambda s,u,**kw   : utils.current_song_chat(s,u),
-    "skip" : lambda s,u,proc,**kw : utils.skip_song(s,u,proc),
-    "cp" : lambda s,u,m,proc,**kw : utils.change_playlist(s,u,m,proc),
+    #"sr"         : lambda s,u,m,**kw : song_request(s,u,m),
+    #"currentsong"   : lambda s,u,**kw   : utils.current_song_chat(s,u),
+    #"skip" : lambda s,u,proc,**kw : utils.skip_song(s,u,proc),
+    #"cp" : lambda s,u,m,proc,**kw : utils.change_playlist(s,u,m,proc),
     # Stream commands
     #"!startstream" : lambda s,u,**kw: start_stream(u),
-    "uptime" : lambda s,**kw: utils.uptime(s),
+    #"uptime" : lambda s,**kw: utils.uptime(s),
     #"!earthfall": lambda s,**kw: utils.chat(s, "Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
-    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
+    #"so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
     #"!togglesr": lambda s,u,m,**kw: toggle_sr(s,u,m)
     #"!commands": lambda s,**kw: chat_commands(s)
     }
@@ -104,9 +104,9 @@ def main(debug):
         thread.start_new_thread(check_download_queue,())
         playlistProc=icescontroller.PlaylistProcess()
     # Loads "!" commands.
-    commands= utils.load_commands()
+    commands= utils.command_db.load_commands()
     # Loads auto-shoutouts.
-    shoutouts=utils.load_shoutouts()
+    shoutouts=utils.command_db.load_shoutouts()
     print commands
     while True:
         try:
@@ -132,6 +132,7 @@ def main(debug):
                     # If the command is DB-defined:
                     if command in commands:
                         message=message.replace("'",r"\'")
+                        print commands[command].get_fields()
                         cmd_obj=utils.execute_command(s,username,message,commands[command])
                         # If we're adding a new command or shoutout.
                         if cmd_obj and "command" in cmd_obj:
@@ -164,6 +165,6 @@ if __name__ == "__main__":
         if "--no-sr" in sys.argv:
             sr_enabled=False
         if "--initialize-db":
-            idb.initialize("commands.json")
+            utils.command_db.init_db("commands.json")
     main(debug)
     

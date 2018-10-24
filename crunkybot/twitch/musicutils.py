@@ -126,6 +126,7 @@ if __name__ == "__main__":
                 print playlist_url,str(playlist_url)
                 songs=get_playlist_info(str(playlist_url))
                 for song in songs:
+                    # Creates a DB Track for each song in a playlist.
                     track=Track(rid,song[0],song[1],dl_location+"/"+song[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
                     res,rid=db.add_track_to_playlist(track)
                     print "Track",rid,track.title_,"added to DB (",track.file_location_,")"
