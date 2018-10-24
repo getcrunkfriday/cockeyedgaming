@@ -15,6 +15,7 @@ import json
 import datetime
 from collections import deque
 from time import sleep
+from dbutils import *
 
 CURR_RAFFLE=[]
 raffle_live=False
@@ -27,65 +28,11 @@ dl_location=cfg.MUSIC_DOWNLOAD_DIR
 db_location=cfg.DB_PATH
 viewer_queue=deque([])
 
-class Command:
-    def __init__(self,vals):
-        self.dict_={
-            "command": vals[0],
-            "command_type": vals[1],
-            "permission": vals[2],
-            "num_args": vals[3],
-            "arguments": vals[4],
-            "action": vals[5]
-        }
-    def __getitem__(self,key):
-        return self.dict_[key]
-    def __setitem__(self,key,value):
-        self.dict_[key]=value
-
-class Shoutout:
-    # shoutouts(command,chat_text,twitch_clip)
-    def __init__(self,vals):
-        self.dict_={
-            "command": vals[0],
-            "so_user": vals[1],
-            "twitch_clip": vals[3],
-            "chat_text": vals[2],
-            "was_seen": False
-        }
-    def __getitem__(self,key):
-        return self.dict_[key]
-    def __setitem__(self,key,value):
-        self.dict_[key]=value
-
-
-conn = sql.connect(db_location)
-def load_commands():
-    commands={}
-    cur=conn.cursor()
-    sql_str="""SELECT * FROM commands"""
-    cur.execute(sql_str)
-    rows=cur.fetchall()
-    print "Rows=",rows
-    for row in rows:
-        cmd=Command(row[1:])
-        commands[row[1]]=cmd
-    return commands
-
-def load_shoutouts():
-    shoutouts={}
-    cur=conn.cursor()
-    sql_str="""SELECT * FROM shoutouts"""
-    cur.execute(sql_str)
-    rows=cur.fetchall()
-    print "Rows=", rows
-    for row in rows:
-        cmd=Shoutout(row[1:])
-        shoutouts[cmd['so_user'].lower()]=cmd
-    return shoutouts
+command_db=CommandDB(db_location)
 
 def execute_command(sock,username,message,command):
     action_str=command["action"]
-    num_args=command["num_args"]
+    num_args=int(command["num_args"])
     argument_defs=command["arguments"].split(",")
     #Split message into arguments
     message_split=message.split()
@@ -116,70 +63,44 @@ def execute_command(sock,username,message,command):
     return ret
 
 def remove_chatcomm(sock,command):
-    cur=conn.cursor()
     if command[0] == "!":
         command=command[1:]
-    sql_str="SELECT * FROM commands WHERE command=?"
-    cur.execute(sql_str,(command,))
-    rows=cur.fetchall()
-    if rows:
-        if rows[0][2] == "CHAT":
-            sql_str="DELETE FROM commands WHERE command=?"
-            cur.execute(sql_str,(command,))
-            conn.commit()
-            chat(sock,command+" successfully removed!")
-            command_obj=Command([rows[0][1],rows[0][2],rows[0][3],rows[0][4],rows[0][5],rows[0][6]])
-            return {"command":("REMOVE",command_obj)}
+    command_obj=command_db.get_command(command)
+    if command_obj:
+        command_db.remove_command(command_obj)
+        chat(sock,command+" successfully removed!")
+        return {"command":("REMOVE",command_obj)}
+    return {}
 
 def add_chatcomm(sock,command,text):
-    cur=conn.cursor()
     if command[0] == "!":
         command=command[1:]
-    sql_str="INSERT INTO commands(command,command_type,permission,num_args,arguments,action) VALUES(?,?,?,?,?,?)"
     text=text.replace("'",r"\'")
-    cur.execute(sql_str,(command,"CHAT","ALL","0","","chat(%s,'"+text+"'')"))
     command_obj=Command([command,"CHAT","ALL",0,"","chat(%s,'"+text+"')"])
-    conn.commit()
+    command_db.add_command(command_obj)
     chat(sock,command+" successfully added!")
     return {"command":("ADD",command_obj)}
 
 def remove_shoutout(sock,so_user):
-    cur=conn.cursor()
-    sql_str="SELECT * FROM shoutouts WHERE so_user=?"
-    cur.execute(sql_str,(so_user.lower(),))
-    rows=cur.fetchall()
-    print rows
-    if rows:
-        sql_str="DELETE FROM shoutouts WHERE so_user=?"
-        cur.execute(sql_str,(so_user.lower(),))
-        conn.commit()
-        sql_str="DELETE FROM commands WHERE command=?"
-        cur.execute(sql_str,(rows[0][1],))
-        conn.commit()
-        chat(sock,"Shoutout for "+so_user+" successfully removed.")
-        shoutout_obj=Shoutout([rows[0][1],rows[0][2],rows[0][3],rows[0][4]])
-        command_obj=Command([rows[0][1],"","","","",""])
+    if so_user[0] == "@":
+        so_user=so_user[1:]
+    shoutout_obj=command_db.get_shoutout(so_user)
+    command_obj=command_db.get_command(shoutout_obj["command"])
+    if shoutout_obj and command_obj:
+        command_db.remove_command(command_obj)
+        command_db.remove_shoutout(shoutout_obj)
+        chat(sock,"Shoutout for "+so_user+" successfully removed!")
         return {"command":("REMOVE",command_obj),"shoutout":("REMOVE",shoutout_obj)}
-
+    return {}
 
 def add_shoutout(sock,command_name,so_user,twitch_clip,chat_text):
-    cur=conn.cursor()
     chat_text=chat_text.replace("'",r"\'")
     if command_name[0] == "!":
         command_name=command_name[1:]
-    # Inserts a new shoutout into the database.
-    sql_str="INSERT INTO shoutouts(command,so_user,chat_text,twitch_clip) VALUES(?,?,?,?)"
-    cur.execute(sql_str,(command_name,so_user.lower(),chat_text,twitch_clip))
-    # Inserts the command version of the shoutout into the database.
-    sql_str="INSERT INTO commands(command,command_type,permission,num_args,arguments,action) VALUES(?,?,?,?,?,?)"
-    cur.execute(sql_str,(command_name,"CHAT","MODERATOR","0","","chat(%s,'"+" : ".join([chat_text,twitch_clip])+"')"))
-    conn.commit()
-    chat(sock,"Shoutout for "+so_user+" successfully added!")
-    # Create objects to return to the bot.
     shoutout_obj=Shoutout([command_name,so_user,twitch_clip,chat_text])
-    command_obj =Command([command_name,"CHAT","MODERATOR",0,"","chat(%s,'"+" : ".join([chat_text,twitch_clip])+"')"])
+    shoutout_obj,command_obj=command_db.add_shoutout(shoutout_obj)
+    chat(sock,"Shoutout for "+so_user+" successfully added!")
     return {"command":("ADD",command_obj),"shoutout":("ADD",shoutout_obj)}
-
 
 def add_command(sock,username,command_name,action_function):
     return False
