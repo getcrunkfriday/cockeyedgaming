@@ -78,7 +78,7 @@ def download_vid(vid):
 
 def download_playlist(pl,dl_location=dl_location):
     with youtube_dl.YoutubeDL(dl_playlist_options) as ydl:
-        ydl.download([vid])
+        ydl.download([pl])
     return True
 
 def youtube_search(search_str):
@@ -112,13 +112,14 @@ def youtube_search(search_str):
 if __name__ == "__main__":
     import sys
     db=MusicDB(db_location)
-    if len(sys.argv) == 5:
+    if len(sys.argv) >= 2:
+        print sys.argv
         if sys.argv[1] == "addplaylist":
             # Arg 1: addplaylist
             # Arg 2: [youtube_playlist]
             # Arg 3: playlist name
             playlist_url=sys.argv[2]
-            playlist_name=sys.argv[3]
+            playlist_name=" ".join(sys.argv[3:])
             playlist=Playlist(playlist_name,"cockeyedgaming")
             res,rid=db.add_playlist(playlist)
             if res:
@@ -127,9 +128,16 @@ if __name__ == "__main__":
                 songs=get_playlist_info(str(playlist_url))
                 for song in songs:
                     # Creates a DB Track for each song in a playlist.
+                    print "Adding to playlist...",rid
                     track=Track(rid,song[0],song[1],dl_location+"/"+song[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
-                    res,rid=db.add_track_to_playlist(track)
-                    print "Track",rid,track.title_,"added to DB (",track.file_location_,")"
+                    res,track_rid=db.add_track_to_playlist(track)
+                    print "Track",track_rid,track.title_,"added to DB (",track.file_location_,")"
                 download_playlist(playlist_url)
-
-
+        elif sys.argv[1] == "removeplaylist":
+            # arg 1: removeplaylist
+            # arg2: playlist_id
+            db.remove_playlist(int(sys.argv[2]))
+        elif sys.argv[1] == "list":
+            playlists=db.get_playlists()
+            for p in playlists:
+                print p.rid_,":",p.playlist_name_

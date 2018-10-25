@@ -9,7 +9,7 @@ class PlaylistProcess:
 		# If ices is already running, grab the current pid.
 		# Otherwise, create a new ices process.
 		try:
-			self.pid=subprocess.check_output(["pidof","-s","ices"])
+			self.pid=int(subprocess.check_output(["pidof","-s","ices"]))
 		except:
 			self.pid=None
 		if not self.pid:

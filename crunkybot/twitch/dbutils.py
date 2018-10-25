@@ -86,7 +86,9 @@ class Shoutout:
 class CommandDB:
 	''' Helper functions for the commands database. '''
 	def __init__(self,db_location):
+		self.db_location_=db_location
 		self.connection_=sql.connect(db_location)
+		self.is_open_=True
 		cur = self.connection_.cursor()
 		cur.execute('''CREATE TABLE IF NOT EXISTS commands (id INTEGER PRIMARY KEY, command TEXT, command_type TEXT, permission TEXT, num_args INTEGER, arguments TEXT, action TEXT, UNIQUE(command))''')
 		cur.execute('''CREATE TABLE IF NOT EXISTS shoutouts (id INTEGER PRIMARY KEY, command TEXT, so_user TEXT, chat_text TEXT, twitch_clip TEXT, UNIQUE(command, so_user))''')
@@ -100,61 +102,85 @@ class CommandDB:
 				print "Inserting",c["command"]
 				cur.execute(sql_str,(c["command"],c["command_type"],c["permission"],int(c["num_args"]),c["arguments"],c["action"]))
 			self.connection_.commit()
+	def close(self):
+		if self.is_open_:
+			self.connection_.close()
+			self.is_open_=False
+	def open(self):
+		if not self.is_open_:
+			self.connection_=sql.connect(self.db_location_)
+			self.is_open_=True
 	def load_commands(self):
-	    commands={}
-	    cur=self.connection_.cursor()
-	    sql_str="""SELECT * FROM commands"""
-	    cur.execute(sql_str)
-	    rows=cur.fetchall()
-	    print "Rows=",rows
-	    for row in rows:
-	        cmd=Command(row[1:])
-	        commands[row[1]]=cmd
-	    return commands
+		self.open()
+		commands={}
+		cur=self.connection_.cursor()
+		sql_str="""SELECT * FROM commands"""
+		cur.execute(sql_str)
+		rows=cur.fetchall()
+		self.close()
+		print "Rows=",rows
+		for row in rows:
+			cmd=Command(row[1:])
+			commands[row[1]]=cmd
+		return commands
 	def load_shoutouts(self):
-	    shoutouts={}
-	    cur=self.connection_.cursor()
-	    sql_str="""SELECT * FROM shoutouts"""
-	    cur.execute(sql_str)
-	    rows=cur.fetchall()
-	    print "Rows=", rows
-	    for row in rows:
-	        cmd=Shoutout(row[1:])
-	        shoutouts[cmd['so_user'].lower()]=cmd
-	    return shoutouts
+		self.open()
+		shoutouts={}
+		cur=self.connection_.cursor()
+		sql_str="""SELECT * FROM shoutouts"""
+		cur.execute(sql_str)
+		rows=cur.fetchall()
+		self.close()
+		print "Rows=", rows
+		for row in rows:
+			cmd=Shoutout(row[1:])
+			shoutouts[cmd['so_user'].lower()]=cmd
+		return shoutouts
 	def add_command(self,command):
+		self.open()
 		cur = self.connection_.cursor()
 		cur.execute('''INSERT OR IGNORE INTO commands (command, command_type, permission, num_args, arguments, action) VALUES(?,?,?,?,?,?)''', command.get_fields())
-		self.connection_.commit()
+                self.connection_.commit()
+		self.close()
 		return command
 	def add_shoutout(self,shoutout):
+		self.open()
 		cur = self.connection_.cursor()
 		command=Command((shoutout["command"], "CHAT","MODERATOR","0","","chat(%s,'"+" : ".join([shoutout["chat_text"],shoutout["twitch_clip"]])+"')"))
 		cur.execute('''INSERT OR IGNORE INTO shoutouts (command,so_user,chat_text,twitch_clip) VALUES(?,?,?,?)''', shoutout.get_fields())
 		cur.execute('''INSERT OR IGNORE INTO commands (command, command_type, permission, num_args, arguments, action) VALUES(?,?,?,?,?,?)''', command.get_fields())
 		self.connection_.commit()
+		self.close()
 		return (shoutout,command)
 	def remove_command(self,command):
+		self.open()
 		cur = self.connection_.cursor()
 		cur.execute('''DELETE FROM commands WHERE command=?''',(command["command"],))
 		self.connection_.commit()
+		self.close()
 	def get_command(self,command_name):
+		self.open()
 		cur = self.connection_.cursor()
 		cur.execute('''SELECT * FROM commands WHERE command=?''', (command_name,))
 		cmd_obj=cur.fetchone()
+		self.close()
 		if cmd_obj:
 			return Command(cmd_obj[1:])
 		else:
 			return None
 	def remove_shoutout(self,shoutout):
+		self.open()
 		cur = self.connection_.cursor()
 		cur.execute('''DELETE FROM commands WHERE command=?''',(shoutout["command"],))
 		cur.execute('''DELETE FROM shoutouts WHERE command=?''',(shoutout["command"],))
 		self.connection_.commit()
+		self.close()
 	def get_shoutout(self,so_user):
+		self.open()
 		cur = self.connection_.cursor()
 		cur.execute('''SELECT * FROM shoutouts WHERE so_user=?''',(so_user,))
 		so_obj=cur.fetchone()
+		self.close()
 		if so_obj:
 			return Shoutout(so_obj[1:])
 		else:
@@ -164,60 +190,107 @@ class CommandDB:
 class MusicDB:
 	'''Helper functions for the music and playlist database. '''
 	def __init__(self,db_location):
+		self.db_location_=db_location
 		self.connection_=sql.connect(db_location)
+		self.is_open_=True
 		cur = self.connection_.cursor()
 		cur.execute('''CREATE TABLE IF NOT EXISTS tracks(id INTEGER PRIMARY KEY, playlist_id INTEGER, youtube_id TEXT, title TEXT, file_location TEXT, user_added TEXT, date_added DATE, num_plays INT)''')
 		cur.execute('''CREATE TABLE IF NOT EXISTS requests(id INTEGER PRIMARY KEY, playlist_id INTEGER, youtube_id TEXT, title TEXT, file_location TEXT, user_added TEXT, date_added DATE)''')
 		cur.execute('''CREATE TABLE IF NOT EXISTS playlist_requests (id INTEGER PRIMARY KEY, playlist_id INTEGER)''')
 		cur.execute('''CREATE TABLE IF NOT EXISTS playlists(id INTEGER PRIMARY KEY, playlist_name TEXT, user_added TEXT, UNIQUE(playlist_name))''')
 		self.connection_.commit()
+	def close(self):
+		if self.is_open_:
+			self.connection_.close()
+			self.is_open_=False
+	def open(self):
+		if not self.is_open_:
+			self.connection_=sql.connect(self.db_location_)
+			self.is_open_=True
 	def add_playlist(self,playlist):
+		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''INSERT OR IGNORE INTO playlists(playlist_name,user_added) VALUES(?,?)''',playlist.get_fields()[1:])
 		rid=cur.lastrowid
 		self.connection_.commit()
+		self.close()
 		return (True, rid)
 	def add_track_to_playlist(self,track):
+		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''SELECT * FROM tracks WHERE (playlist_id=? AND youtube_id=?)''',(track.playlist_id_,track.youtube_id_,))
 		entry = cur.fetchone()
 		if entry is None:
+                        print "Validation: Adding to playlist",track.get_fields()[1]
 			cur.execute('''INSERT INTO tracks(playlist_id,youtube_id,title,file_location,user_added,date_added,num_plays) VALUES(?,?,?,?,?,?,?)''',track.get_fields()[1:])
 			rid=cur.lastrowid
 			self.connection_.commit()
+			self.close()
 			return (True,rid)
 		else:
+			self.close()
 			return (True,entry[0])
+		self.close()
 		return (False, "DB error.")
 	def get_playlist_by_id(self,playlist_id):
+		self.open()
 		cur=self.connection_.cursor()
-		cur.execute('''SELECT * FROM playlists WHERE (playlist_id=?)''',(playlist_id,))
-		entry = cursor.fetchone()
+		cur.execute('''SELECT * FROM playlists WHERE (id=?)''',(playlist_id,))
+		entry = cur.fetchone()
 		if entry is not None:
 			playlist=Playlist(*entry[1:])
 			playlist.set_id(entry[0])
+			self.close()
 			return playlist
 		else:
+			self.close()
 			return False
 	def get_playlist_by_name(self,playlist_name):
+		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''SELECT * FROM playlists WHERE (playlist_name=?)''',(playlist_name,))
 		entry = cur.fetchone()
 		if entry is not None:
 			playlist=Playlist(*entry[1:])
 			playlist.set_id(entry[0])
+			self.close()
 			return playlist
 		else:
+			self.close()
 			return False
+	def get_playlists(self):
+		self.open()
+		cur=self.connection_.cursor()
+		cur.execute('''SELECT * FROM playlists''')
+		rows = cur.fetchall()
+		self.close()
+		playlists=[]
+		for row in rows:
+			playlist=Playlist(*row[1:])
+			playlist.set_id(row[0])
+			playlists.append(playlist)
+		return playlists
+        def remove_playlist(self,playlist_id):
+                self.open()
+                cur=self.connection_.cursor()
+                cur.execute('''DELETE FROM tracks WHERE playlist_id=?''',(playlist_id,))
+                cur.execute('''DELETE FROM playlists WHERE id=?''',(playlist_id,))
+                self.connection_.commit()
+                self.close()
 	def get_tracks(self,playlist_id):
+		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''SELECT * FROM tracks WHERE (playlist_id=?)''',(playlist_id,))
 		rows = cur.fetchall()
+		self.close()
 		tracks=[]
 		for row in rows:
-			tracks.append(Track(*row[1:]))
+			track=Track(*row[1:])
+			track.set_id(row[0])
+			tracks.append(track)
 		return tracks
 	def get_track_requests(self):
+		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''SELECT * FROM requests''')
 		rows = cur.fetchall()
@@ -225,25 +298,40 @@ class MusicDB:
 		for row in rows:
 			tracks.append(Request(*row[1:]))
 			cur.execute('''DELETE FROM requests WHERE id=?''', (row[0],))
-		self.connection_.cursor()
+		self.connection_.commit()
+		self.close()
 		return tracks
+	def add_playlist_request(self,playlist):
+		self.open()
+		cur=self.connection_.cursor()
+		cur.execute('''INSERT INTO playlist_requests(playlist_id) VALUES(?)''',(playlist.rid_,))
+		self.connection_.commit()
+		self.close()
+		return True
+
 	def pop_playlist_request(self):
 		# Make a "Pop" method that gets the next playlist and deletes it from the DB.
+		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''SELECT * FROM playlist_requests''')
 		row = cur.fetchone()
 		if row:
 			playlist_id=row[1]
 			cur.execute('''DELETE FROM playlist_requests WHERE playlist_id=?''', (playlist_id,))
-        	con.commit()
-        	cur.execute('''SELECT * FROM tracks WHERE playlist_id=?''', (playlist_id,))
-        	pl_rows=cur.fetchall()
-        	tracks=[]
-        	for pl_row in pl_rows:
-        		tracks.append(Track(*row[1:]))
-        	return tracks
-        return None
+			self.connection_.commit()
+			cur.execute('''SELECT * FROM tracks WHERE playlist_id=?''', (playlist_id,))
+			pl_rows=cur.fetchall()
+			tracks=[]
+			for pl_row in pl_rows:
+				tracks.append(Track(*pl_row[1:]))
+			self.close()
+			return tracks
+		self.close()
+		return None
+	
 	def purge_requests(self):
+		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''DROP TABLE requests''')
 		self.connection_.commit()
+		self.close()

@@ -26,9 +26,11 @@ youtube_re_str="(http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)|(http(s
 youtube_re=re.compile(youtube_re_str)
 dl_location=cfg.MUSIC_DOWNLOAD_DIR
 db_location=cfg.DB_PATH
+music_db_location=cfg.MUSIC_DB
 viewer_queue=deque([])
 
 command_db=CommandDB(db_location)
+music_db=MusicDB(music_db_location)
 
 def execute_command(sock,username,message,command):
     action_str=command["action"]
@@ -76,10 +78,14 @@ def add_chatcomm(sock,command,text):
     if command[0] == "!":
         command=command[1:]
     text=text.replace("'",r"\'")
-    command_obj=Command([command,"CHAT","ALL",0,"","chat(%s,'"+text+"')"])
-    command_db.add_command(command_obj)
-    chat(sock,command+" successfully added!")
-    return {"command":("ADD",command_obj)}
+    if not command_db.get_command(command):
+        command_obj=Command([command,"CHAT","ALL",0,"","chat(%s,'"+text+"')"])
+        res=command_db.add_command(command_obj)
+        chat(sock,command+" successfully added!")
+        return {"command":("ADD",command_obj)}
+    else:
+        chat(sock,"I already know "+command+" !")
+        return {}
 
 def remove_shoutout(sock,so_user):
     if so_user[0] == "@":
@@ -97,10 +103,15 @@ def add_shoutout(sock,command_name,so_user,twitch_clip,chat_text):
     chat_text=chat_text.replace("'",r"\'")
     if command_name[0] == "!":
         command_name=command_name[1:]
-    shoutout_obj=Shoutout([command_name,so_user,twitch_clip,chat_text])
-    shoutout_obj,command_obj=command_db.add_shoutout(shoutout_obj)
-    chat(sock,"Shoutout for "+so_user+" successfully added!")
-    return {"command":("ADD",command_obj),"shoutout":("ADD",shoutout_obj)}
+    if so_user[0] == "@":
+        so_user=so_user[1:]
+    if not command_db.get_command(command_name) and not command_db.get_shoutout(so_user):
+        shoutout_obj=Shoutout([command_name,so_user,twitch_clip,chat_text])
+        shoutout_obj,command_obj=command_db.add_shoutout(shoutout_obj)
+        chat(sock,"Shoutout for "+so_user+" successfully added!")
+        return {"command":("ADD",command_obj),"shoutout":("ADD",shoutout_obj)}
+    else:
+        chat(sock,"I already know "+so_user+" !... or "+command_name+"?")
 
 def add_command(sock,username,command_name,action_function):
     return False
@@ -150,31 +161,27 @@ def download_song_request(vid):
 # Function: song_request
 def change_playlist(s,user,message,proc):
     if(isOp(user)):
-        conn=sql.connect(db_location)
-        c=conn.cursor()
         message=message.strip()
         playlist_id=-1
         playlist_name=None
+        playlist=None
         try:
             playlist_id=int(message)
         except:
             playlist_name=message
         if playlist_id >= 0:
             # playlists (id INTEGER PRIMARY KEY, playlist_name TEXT, user_added TEXT)
-            c.execute('''SELECT * FROM playlists WHERE id=?''', (playlist_id,))
-            rows=c.fetchall()
-            if rows:
-                c.execute('''INSERT INTO playlist_requests(playlist_id) VALUES(?)''',(playlist_id,))
-                conn.commit()
-        elif playlist_name:
-            c.execute('''SELECT * FROM playlists WHERE playlist_name=?''', (playlist_name.lower(),))
-            rows=c.fetchall()
-            if rows:
-                curr_playlist_id=rows[0]
-                c.execute('''INSERT INTO playlist_requests(playlist_id) VALUES(?)''',(curr_playlist_id,))
-                conn.commit()
+            playlist=music_db.get_playlist_by_id(playlist_id)
+            if playlist:
+                music_db.add_playlist_request(playlist)
+            else:
+                chat(sock,"No playlist with id"+`playlist_id`)
+                return None
         else:
-            chat(sock,"No playlist with that name or ID.")
+            if playlist_name:
+                playlist=music_db.get_playlist_by_name(playlist_name)
+        music_db.add_playlist_request(playlist)
+        chat(s,"Playlist changed to: "+playlist.playlist_name_+".")
 
 # Download youtube song and add to request list.
 def commit_song_request(conn, user, vid, vidid, title):
@@ -205,17 +212,24 @@ def current_song(sock, user):
         with open("current_track.txt") as f:
             current_song=f.readlines()[0].split(",")
             return current_song[0]+" (requested by: "+current_song[1]+")"
-            #chat(sock,"Currently playing: "+current_song)
     else:
         return ""
 
 def skip_song(sock,user,proc):
     if isOp(user) or user.lower() == "cockeyedgaming":
         currsong=current_song(sock,user)
+        print currsong
         if currsong:
-            chat(sock,"Skipping "+currsong+"...")
             proc.skip()
-       
+            chat(sock,currsong+" skipped...")
+
+def list_playlists(sock,user):
+    if isOp(user) or user.lower() == "cockeyedgaming":
+        playlists=music_db.get_playlists()
+        playlists=playlists[:(min(len(playlists),5))]
+        chat_str="Playlists: "+",".join([`p.rid_`+": "+p.playlist_name_[:(min(len(p.playlist_name_),8))] for p in playlists])
+        chat(sock,chat_str)
+    
 # Function: load_insults
 # Loads insults from a text file.
 def load_insults(insult_file):
@@ -340,8 +354,8 @@ def add_to_raffle(sock,user):
     global CURR_RAFFLE
     if user not in CURR_RAFFLE:
         num_entries=1
-        if isSubscriber(user):
-            num_entries=3
+        #if isSubscriber(user):
+        #    num_entries=3
         for i in range(num_entries):
             CURR_RAFFLE.append(user)
         chat(sock, "Thanks "+user+"! You have a "+`num_entries`+" in "+`len(CURR_RAFFLE)`+" chance of winning...")

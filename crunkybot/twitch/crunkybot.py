@@ -23,24 +23,25 @@ base_commands = {
     #"!recipe"   : lambda s,**kw : utils.chat(s, "The \"Dirty Banana\" recipe can be found here: https://www.thespruce.com/dirty-banana-4133904."),
     #"!celebrate" : lambda s,**kw : utils.chat(s, "Come celebrate 200+ followers with us this Saturday! What's planned? Check http://bit.ly/2u9Ps9P !"),
     # Raffle commands
-    #"raffle"   : lambda s,u,**kw : utils.raffle(s,u),
-    #"rafflestop" : lambda s,u,**kw : utils.raffle_stop(s,u),
-    #"raffledraw" : lambda s,u,**kw : utils.raffle_draw(s,u),
-    #"rafflestart": lambda s,u,m,**kw : utils.raffle_start(s,u,m),
+    "raffle"   : lambda s,u,**kw : utils.raffle(s,u),
+    "rafflestop" : lambda s,u,**kw : utils.raffle_stop(s,u),
+    "raffledraw" : lambda s,u,**kw : utils.raffle_draw(s,u),
+    "rafflestart": lambda s,u,m,**kw : utils.raffle_start(s,u,m),
     # Queue commands
     #"!queue"    : lambda s,u,**kw : utils.add_to_queue(s,u),
     #"!popqueue" : lambda s,u,m,**kw : utils.pop_queue(s,u,m),
     #"!currqueue": lambda s,**kw   : utils.get_queue(s),
     # Music commands
-    #"sr"         : lambda s,u,m,**kw : song_request(s,u,m),
-    #"currentsong"   : lambda s,u,**kw   : utils.current_song_chat(s,u),
-    #"skip" : lambda s,u,proc,**kw : utils.skip_song(s,u,proc),
-    #"cp" : lambda s,u,m,proc,**kw : utils.change_playlist(s,u,m,proc),
+    "sr"         : lambda s,u,m,**kw : song_request(s,u,m),
+    "currentsong"   : lambda s,u,**kw   : utils.current_song_chat(s,u),
+    "skip" : lambda s,u,proc,**kw : utils.skip_song(s,u,proc),
+    "cp" : lambda s,u,m,proc,**kw : utils.change_playlist(s,u,m,proc),
+    "playlists" : lambda s,u,m,**kw : utils.list_playlists(s,u),
     # Stream commands
     #"!startstream" : lambda s,u,**kw: start_stream(u),
-    #"uptime" : lambda s,**kw: utils.uptime(s),
+    "uptime" : lambda s,**kw: utils.uptime(s),
     #"!earthfall": lambda s,**kw: utils.chat(s, "Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
-    #"so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
+    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
     #"!togglesr": lambda s,u,m,**kw: toggle_sr(s,u,m)
     #"!commands": lambda s,**kw: chat_commands(s)
     }
@@ -130,7 +131,7 @@ def main(debug):
                     if command in base_commands:
                         base_commands[command](s,u=username,m=message,proc=playlistProc)
                     # If the command is DB-defined:
-                    if command in commands:
+                    elif command in commands:
                         message=message.replace("'",r"\'")
                         print commands[command].get_fields()
                         cmd_obj=utils.execute_command(s,username,message,commands[command])

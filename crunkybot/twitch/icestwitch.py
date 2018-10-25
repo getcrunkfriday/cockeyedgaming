@@ -3,6 +3,9 @@ import sys
 import unicodedata
 from random import shuffle
 
+# This file controls ices playlists.
+# Copy me to /usr/local/etc/modules/
+
 sys.path.append("/home/andrew/Git/cockeyedgaming/crunkybot/twitch")
 import dbutils as db
 
@@ -12,14 +15,14 @@ db_location="/home/andrew/dbs/crunky.db"
 music_db=db.MusicDB(db_location)
 tplaylist=[]
 trequests=[]
-tplaylist_id=0
+tplaylist_id=3
 tcurrent_track=""
 tuser_added=""
 
 def ices_init():
     global music_db
     tracks=music_db.get_tracks(tplaylist_id)
-    tplaylist=[(track["title_"],track["file_location_"]) for track in tracks]
+    tplaylist=[(track.title_,track.file_location_) for track in tracks]
     shuffle(tplaylist)
     #for t in tplaylist:
     #    print t
@@ -42,19 +45,21 @@ def ices_get_metadata():
 def ices_shutdown():
     #global db,con,cur
     music_db.purge_requests()
+    music_db.close()
     return 1
 
 def ices_get_next():
     global tplaylist
+    global tplaylist_id
     global trequests
     global tcurrent_track
     global music_db
     # Check playlist requests.
     new_pl=music_db.pop_playlist_request()
     if new_pl:
-        tplaylist=[(track['title_'],track['file_location_']) for track in new_pl]
+        tplaylist=[(track.title_,track.file_location_) for track in new_pl]
         shuffle(tplaylist)
-        tplaylist_id=playlist_id
+        tplaylist_id=new_pl[0].playlist_id_
     # Check request table.
     requests=music_db.get_track_requests()
     next_track = None
@@ -62,7 +67,7 @@ def ices_get_next():
     if requests:
         for track in requests:
             # Removes the current request from the DB.
-            trequests.append((track["title_"],track["file_location_"],track["user_added_"]))
+            trequests.append((track.title_,track.file_location_,track.user_added_))
     # If I have a request, make that the next track...
     if trequests:
         track=trequests.pop(0)
@@ -78,7 +83,7 @@ def ices_get_next():
     else:
         print "Reshuffling playlist."
         tracks=music_db.get_tracks(tplaylist_id)
-        tplaylist=[(track["title_"],track["file_location_"]) for track in tracks]
+        tplaylist=[(track.title_,track.file_location_) for track in tracks]
         shuffle(tplaylist)
         track=tplaylist.pop()
         tcurrent_track=track[0]+",cockeyedgaming"
