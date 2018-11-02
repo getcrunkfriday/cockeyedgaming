@@ -16,7 +16,7 @@ base_commands = {
     # Text-based commands
     #"!streamote": lambda s,**kw : utils.chat(s,"Join us for Streamline bingo at: http://streamote.tv/cockeyedgaming"),
     #"!streamrpg": lambda s,**kw : utils.chat(s,"I'm sorry, are we boring you?! Fine, here: http://streamrpg.com/cockeyedgaming"),
-    #"insult"   : lambda s,u,m,**kw : utils.insult(s,u,m,insults),
+    "insult"   : lambda s,u,m,**kw : utils.insult(s,u,m,insults),
     #"!opponent" : lambda s,**kw : utils.chat(s,"We are playing Yunalescka (https://twitch.tv/yunalescka) in the HotStreams Tourney! Give them a follow!"),
     #"!multi"    : lambda s,**kw : utils.chat(s,"Watch both teams... at the saaaame tiiime! https://multistre.am/cockeyedgaming/yunalescka/layout4/"),
     #"!race" : lambda s,**kw : utils.chat(s,"Watch the full race at: https://multistre.am/cockeyedgaming/ashplissken/layout3/"),
@@ -40,7 +40,7 @@ base_commands = {
     # Stream commands
     #"!startstream" : lambda s,u,**kw: start_stream(u),
     "uptime" : lambda s,**kw: utils.uptime(s),
-    #"!earthfall": lambda s,**kw: utils.chat(s, "Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
+    "earthfall": lambda s,**kw: utils.chat(s, "Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
     "so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
     #"!togglesr": lambda s,u,m,**kw: toggle_sr(s,u,m)
     #"!commands": lambda s,**kw: chat_commands(s)
