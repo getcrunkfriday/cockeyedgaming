@@ -40,7 +40,7 @@ base_commands = {
     # Stream commands
     #"!startstream" : lambda s,u,**kw: start_stream(u),
     "uptime" : lambda s,**kw: utils.uptime(s),
-    "earthfall": lambda s,**kw: utils.chat(s, "Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
+    "earthfall": lambda s,u,**kw: utils.chat(s, u,"Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
     "so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
     #"!togglesr": lambda s,u,m,**kw: toggle_sr(s,u,m)
     #"!commands": lambda s,**kw: chat_commands(s)
@@ -152,7 +152,7 @@ def main(debug):
                 if username.lower() in shoutouts:
                     so=shoutouts[username.lower()]
                     if not so['was_seen']:
-                        utils.chat(s," : ".join([so['chat_text'],so['twitch_clip']]))
+                        utils.chat(s,username," : ".join([so['chat_text'],so['twitch_clip']]))
                         so['was_seen']=True
         except Exception,e:
             exc_type,exc_obj,exc_tb = sys.exc_info()
