@@ -3,9 +3,26 @@ import os
 import os.path
 import sys
 import crunkycfg as cfg
-
+from dbutils import *
 conn=sqlite3.connect(cfg.MUSIC_DB)
 cur=conn.cursor()
+
+def adjust_commands():
+    # u"chat(%s,'Check us out on Twitter for stream updates.')")
+    command_db = CommandDB(cfg.DB_PATH)
+    commands=command_db.load_commands()
+    for k,c in commands.iteritems():
+        if c['action'][:4] == "chat":
+            new_command=Command([c['command'],c['command_type'],c['permission'],c['num_args'],c['arguments'],c['action']])
+            new_command.set_id(c['rid'])
+            insert_pos=new_command['action'].find("%s")+3
+            print insert_pos
+            new_action=new_command['action'][:insert_pos]+"%u,"+new_command['action'][insert_pos:]
+            command_db.open()
+            cur=command_db.connection_.cursor()
+            cur.execute('''UPDATE commands SET action=? WHERE command=?''', (new_action,c['command']))
+    command_db.connection_.commit()
+    command_db.close()
 
 def cleanse_db():
     rows=cur.execute('''SELECT * FROM tracks''')
