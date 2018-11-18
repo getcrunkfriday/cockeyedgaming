@@ -146,7 +146,7 @@ class CommandDB:
 	def add_shoutout(self,shoutout):
 		self.open()
 		cur = self.connection_.cursor()
-		command=Command((shoutout["command"], "CHAT","MODERATOR","0","","chat(%s,'"+" : ".join([shoutout["chat_text"],shoutout["twitch_clip"]])+"')"))
+		command=Command((shoutout["command"], "CHAT","MODERATOR","0","","chat(%s,%u,'"+" : ".join([shoutout["chat_text"],shoutout["twitch_clip"]])+"')"))
 		cur.execute('''INSERT OR IGNORE INTO shoutouts (command,so_user,chat_text,twitch_clip) VALUES(?,?,?,?)''', shoutout.get_fields())
 		cur.execute('''INSERT OR IGNORE INTO commands (command, command_type, permission, num_args, arguments, action) VALUES(?,?,?,?,?,?)''', command.get_fields())
 		self.connection_.commit()

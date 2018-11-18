@@ -33,6 +33,9 @@ command_db=CommandDB(db_location)
 music_db=MusicDB(music_db_location)
 
 def execute_command(sock,username,message,command):
+    """
+    Executes a command to the bot. 
+    """
     action_str=command["action"]
     num_args=int(command["num_args"])
     argument_defs=command["arguments"].split(",")
@@ -70,7 +73,7 @@ def remove_chatcomm(sock,command):
     command_obj=command_db.get_command(command)
     if command_obj:
         command_db.remove_command(command_obj)
-        chat(sock,command+" successfully removed!")
+        chat(sock,"crunkybot",command+" successfully removed!")
         return {"command":("REMOVE",command_obj)}
     return {}
 
@@ -79,12 +82,12 @@ def add_chatcomm(sock,command,text):
         command=command[1:]
     text=text.replace("'",r"\'")
     if not command_db.get_command(command):
-        command_obj=Command([command,"CHAT","ALL",0,"","chat(%s,'"+text+"')"])
+        command_obj=Command([command,"CHAT","ALL",0,"","chat(%s,%u,'"+text+"')"])
         res=command_db.add_command(command_obj)
-        chat(sock,command+" successfully added!")
+        chat(sock,"crunkybot",command+" successfully added!")
         return {"command":("ADD",command_obj)}
     else:
-        chat(sock,"I already know "+command+" !")
+        chat(sock,"crunkybot","I already know "+command+" !")
         return {}
 
 def remove_shoutout(sock,so_user):
@@ -95,7 +98,7 @@ def remove_shoutout(sock,so_user):
     if shoutout_obj and command_obj:
         command_db.remove_command(command_obj)
         command_db.remove_shoutout(shoutout_obj)
-        chat(sock,"Shoutout for "+so_user+" successfully removed!")
+        chat(sock,"crunkybot","Shoutout for "+so_user+" successfully removed!")
         return {"command":("REMOVE",command_obj),"shoutout":("REMOVE",shoutout_obj)}
     return {}
 
@@ -108,10 +111,10 @@ def add_shoutout(sock,command_name,so_user,twitch_clip,chat_text):
     if not command_db.get_command(command_name) and not command_db.get_shoutout(so_user):
         shoutout_obj=Shoutout([command_name,so_user,twitch_clip,chat_text])
         shoutout_obj,command_obj=command_db.add_shoutout(shoutout_obj)
-        chat(sock,"Shoutout for "+so_user+" successfully added!")
+        chat(sock,"crunkybot","Shoutout for "+so_user+" successfully added!")
         return {"command":("ADD",command_obj),"shoutout":("ADD",shoutout_obj)}
     else:
-        chat(sock,"I already know "+so_user+" !... or "+command_name+"?")
+        chat(sock,"crunkybot","I already know "+so_user+" !... or "+command_name+"?")
 
 def add_command(sock,username,command_name,action_function):
     return False
@@ -119,7 +122,7 @@ def add_command(sock,username,command_name,action_function):
 def process_song_request(sock,user,message):
     print "Processing..."
     if not message:
-        chat(sock, "Gotta use a YouTube search or link "+user+", you n00b!")
+        chat(sock,"crunkybot", "Gotta use a YouTube search or link "+user+", you n00b!")
         return False
     vid=message.split(" ")[0]
     vid2=vid
@@ -131,10 +134,10 @@ def process_song_request(sock,user,message):
             res=musicutils.get_vid_info(vid2)
             if res:
                 (vidid,title)=(res[0],res[1])
-                chat(sock,title+" requested by "+user+" added to the queue!")
+                chat(sock,"crunkybot",title+" requested by "+user+" added to the queue!")
                 return (vidid,title,vid2)
             else:
-                chat(sock,"Video must be < 7 minutes long.")
+                chat(sock,"crunkybot","Video must be < 7 minutes long.")
                 return False
         except Exception,e:
             print "Exception",e
@@ -144,10 +147,10 @@ def process_song_request(sock,user,message):
             res2=musicutils.get_vid_info("https://www.youtube.com/watch?v="+res)
             if res2:
                 (vidid,title)=(res2[0],res2[1])
-                chat(sock,title+" requested by "+user+" added to the queue!")
+                chat(sock,"crunkybot",title+" requested by "+user+" added to the queue!")
                 return (vidid,title,"https://www.youtube.com/watch?v="+res)
             else:
-                chat(sock,"Video must be < 7 minutes long.")
+                chat(sock,"crunkybot","Video must be < 7 minutes long.")
                 return False
         except Exception,e:
             print "Exception",e
@@ -175,13 +178,13 @@ def change_playlist(s,user,message,proc):
             if playlist:
                 music_db.add_playlist_request(playlist)
             else:
-                chat(sock,"No playlist with id"+`playlist_id`)
+                chat(sock,"crunkybot","No playlist with id"+`playlist_id`)
                 return None
         else:
             if playlist_name:
                 playlist=music_db.get_playlist_by_name(playlist_name)
         music_db.add_playlist_request(playlist)
-        chat(s,"Playlist changed to: "+playlist.playlist_name_+".")
+        chat(s,"crunkybot","Playlist changed to: "+playlist.playlist_name_+".")
 
 # Download youtube song and add to request list.
 def commit_song_request(conn, user, vid, vidid, title):
@@ -203,9 +206,9 @@ def commit_song_request(conn, user, vid, vidid, title):
 def current_song_chat(sock,user):
     cs=current_song(sock,user)
     if cs:
-        chat(sock,"Currently playing: "+cs)
+        chat(sock,"crunkybot","Currently playing: "+cs)
     else:
-        chat(sock,"No song is currently playing.")
+        chat(sock,"crunkybot","No song is currently playing.")
 
 def current_song(sock, user):
     if os.path.exists("current_track.txt"):
@@ -221,14 +224,14 @@ def skip_song(sock,user,proc):
         print currsong
         if currsong:
             proc.skip()
-            chat(sock,currsong+" skipped...")
+            chat(sock,user,currsong+" skipped...")
 
 def list_playlists(sock,user):
     if isOp(user) or user.lower() == "cockeyedgaming":
         playlists=music_db.get_playlists()
         playlists=playlists[:(min(len(playlists),5))]
         chat_str="Playlists: "+",".join([`p.rid_`+": "+p.playlist_name_[:(min(len(p.playlist_name_),8))] for p in playlists])
-        chat(sock,chat_str)
+        chat(sock,user,chat_str)
     
 # Function: load_insults
 # Loads insults from a text file.
@@ -246,19 +249,20 @@ def insult(sock,user,message,insults):
         insult=random.choice(insults)
         if not insult_object:
             insult_object=user
-        chat(sock,user+" "+insult[0]+" "+insult_object+" "+insult[1])
+        chat(sock,user,user+" "+insult[0]+" "+insult_object+" "+insult[1])
 
 
 def shoutout(sock,user,message):
     if isOp(user) or user.lower() == "cockeyedgaming":
         streamer=message.strip()
-        chat(sock,"Have you heard of our friend "+streamer+"?? Check them out over at twitch.tv/"+streamer+" !")
+        chat(sock,user,"Have you heard of our friend "+streamer+"?? Check them out over at twitch.tv/"+streamer+" !")
 # Function: chat
 # Send a chat message to the server.
 #    Parameters:
 #      sock -- the socket over which to send the message
 #      msg  -- the message to send
-def chat(sock, msg, debug=False):
+def chat(sock, user, msg, debug=False):
+    msg=msg.replace("${username}",user)
     if not debug:
         sock.send("PRIVMSG #{} :{}\r\n".format(cfg.TWITCH_CHAN, msg.encode('utf-8')))
     else:
@@ -270,7 +274,7 @@ def chat(sock, msg, debug=False):
 #       sock -- the socket over which to send the ban command
 #       user -- the user to be banned
 def ban(sock, user):
-    chat(sock, ".ban {}".format(user))
+    chat(sock,"crunkybot", ".ban {}".format(user))
 
 # Function: timeout
 # Timeout a user for a set period of time
@@ -279,7 +283,7 @@ def ban(sock, user):
 #       user -- the user to be timed out
 #       seconds -- the length of the timeout in seconds (default 600)
 def timeout(sock, user, seconds=600):
-    chat(sock, ".timeout {}".format(user, seconds))
+    chat(sock,"crunkybot", ".timeout {}".format(user, seconds))
 
 # Function: threadFillOpList
 # In a separate thread, fill up the op list
@@ -358,9 +362,9 @@ def add_to_raffle(sock,user):
         #    num_entries=3
         for i in range(num_entries):
             CURR_RAFFLE.append(user)
-        chat(sock, "Thanks "+user+"! You have a "+`num_entries`+" in "+`len(CURR_RAFFLE)`+" chance of winning...")
+        chat(sock, user, "Thanks "+user+"! You have a "+`num_entries`+" in "+`len(CURR_RAFFLE)`+" chance of winning "+raffle_title+"...")
     else:
-        chat(sock, user+" is already in the raffle!")
+        chat(sock, user, user+" is already in the raffle!")
 
 # Function raffle
 # For users to enter a raffle: !raffle
@@ -369,7 +373,7 @@ def raffle(sock, user):
     if raffle_live:
         add_to_raffle(sock,user)
     elif not raffle_live:
-        chat(sock, "Umm... we're not MADE of SWAG! (...there is no live raffle)")
+        chat(sock, user, "Umm... we're not MADE of SWAG! (...there is no live raffle)")
 
 # Function raffle_start
 # For moderators to start a raffle! Checks user to see if they are a mod, raffled item should be typed after.
@@ -379,14 +383,17 @@ def raffle_start(sock, user, raffle_info):
     if isOp(user) and not raffle_live:
         raffle_live=True
         raffle_title=raffle_info
-        chat(sock, "Raffle has started! Type !raffle to enter for a chance to win "+raffle_title)
+        chat(sock, user, "Raffle has started! Type !raffle to enter for a chance to win "+raffle_title)
 
 def raffle_draw(sock, user):
     global raffle_live,CURR_RAFFLE,raffle_title
     if isOp(user) and raffle_live and CURR_RAFFLE:
         this_raffle=[x for x in CURR_RAFFLE if isFollower(x)]
         draw=random.sample(this_raffle,1)[0]
-        chat(sock, "Congrats to "+draw+"... You've won "+raffle_title+"! (Now gently brush off the haters)")
+        follower="(who has not yet joined the Cockeyed Cult)"
+        if isFollower(draw):
+            follower="(who deserves their free things!)"
+        chat(sock, user, "Congrats to "+draw+" "+follower+"... You've won "+raffle_title+"! (Now gently brush off the haters)")
     else:
         print "Likely the opList is out of sync..."
 
@@ -413,9 +420,9 @@ def pop_queue(sock,user,n):
         m=min(n,len(viewer_queue))
         if m > 0:
             next_users=[viewer_queue.popleft() for x in range(m)]
-            chat(sock, "Up next: "+", ".join(next_users))
+            chat(sock, user, "Up next: "+", ".join(next_users))
         else:
-            chat(sock, "Nobody wants to play?? Type !queue to join us!")
+            chat(sock, user, "Nobody wants to play?? Type !queue to join us!")
         
 def get_queue(sock):
     global viewer_queue
@@ -425,9 +432,9 @@ def get_queue(sock):
         for x in range(min(3,len(viewer_queue))):
             user_list.append(`x+1`+". "+viewer_queue[x])
         chat_string+=", ".join(user_list)
-        chat(sock, chat_string)
+        chat(sock, "crunkybot", chat_string)
     else:
-        chat(sock, "Nobody in queue?! Type !queue to join us!")
+        chat(sock, "crunkybot", "Nobody in queue?! Type !queue to join us!")
 
 test_uptime_data={
   "data": [
@@ -473,9 +480,9 @@ def uptime(sock):
                 time_idx=1
             hours=diff_str[time_idx].split(":")
             live_str+=hours[0]+" hours and "+`int(hours[1])`+" minutes."
-            chat(sock,"Stream has been live for "+live_str)
+            chat(sock,"crunkybot","Stream has been live for "+live_str)
             # "2017-08-14T15:45:17Z"
         else:
-            chat(sock,"The stream isn't live :(.")
+            chat(sock,"crunkybot","The stream isn't live :(.")
     except Exception as e:
         print "Error in ",e
