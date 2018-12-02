@@ -12,7 +12,7 @@ client_user = client.user
 youtube_re_str="(http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)|(http(s)?://www\.youtube\.com/watch/([-A-Za-z0-9_])+)|(http(s)?://youtu\.be/([-A-Za-z0-9_])+)|(http(s)://m\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)"
 youtube_re=re.compile(youtube_re_str)
 
-responses=["${song} ?! FUCK YEAH ${username}! <:CockeyPuff:446555460682776576>","${song} is my jaammmmmmm ${username}!", "... ${song}... really ${user}?... alright, we'll add it anyways. <:CockeyRage:365682294134013952>"]
+responses=["${song} ?! FUCK YEAH ${username}! <:CockeyPuff:446555460682776576>","${song} is my jaammmmmmm ${username}!", "... ${song}... really ${username}?... alright, we'll add it anyways. <:CockeyRage:365682294134013952>"]
 
 @client.event
 async def on_ready():
@@ -39,13 +39,19 @@ async def parse_youtube_message(message):
                                         # Must be less than 7 minutes.
                                         # Can test other things with: view_count, like_count, average_rating, etc.
                                         utils.download_vid(match[0])
+                                else:
+                                        await client.send_message(message.channel,"MEMORY FULL!!!!! (Video has to be < 7 minutes long "+message.author.name+".)")
+                                        return None
                                 dbres=await add_to_database(message,vidid,title,message.author.name)
                                 if dbres:
                                         response=random.sample(responses, 1)[0]
                                         response=response.replace("${username}",message.author.name).replace("${song}",title)
                                         await client.send_message(message.channel,response)
+                                        return response
                         else:
                                 await client.send_message(message.channel,"Really?! :CockeyRage: (try a different YouTube link, this one couldn't download)")
+                                return None
+        return None
 
 async def add_to_database(message,vidid,title,added_by):
         try:
