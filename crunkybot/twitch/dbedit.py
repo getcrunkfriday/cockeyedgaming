@@ -16,7 +16,6 @@ def adjust_commands():
             new_command=Command([c['command'],c['command_type'],c['permission'],c['num_args'],c['arguments'],c['action']])
             new_command.set_id(c['rid'])
             insert_pos=new_command['action'].find("%s")+3
-            print insert_pos
             new_action=new_command['action'][:insert_pos]+"%u,"+new_command['action'][insert_pos:]
             command_db.open()
             cur=command_db.connection_.cursor()
