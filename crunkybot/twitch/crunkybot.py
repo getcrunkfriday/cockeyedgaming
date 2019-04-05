@@ -41,12 +41,23 @@ base_commands = {
     #"!startstream" : lambda s,u,**kw: start_stream(u),
     "uptime" : lambda s,**kw: utils.uptime(s),
     "earthfall": lambda s,u,**kw: utils.chat(s, u,"Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
-    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
+    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m),
+    "addlegend": lambda s,u,m,**kw: add_legendary(s,u,m),
+    "legendaries": lambda s,u,m,**kw: get_legendaries(s,u,m)
     #"!togglesr": lambda s,u,m,**kw: toggle_sr(s,u,m)
     #"!commands": lambda s,**kw: chat_commands(s)
     }
 
 download_queue=[]
+legendaries=[]
+def add_legendary(s,u,m):
+    global legendaries
+    if utils.isOp(u) or u.lower() == "cockeyedgaming":
+        legendaries.append(m)
+        utils.chat(s,u,m+" added to legendaries!")
+
+def get_legendaries(s,u,m):
+    utils.chat(s,u,"Crunk has discovered "+`len(legendaries)`+" legendaries! ("+",".join(legendaries)+")")
 
 def toggle_sr(s,u,m):
     global sr_enabled

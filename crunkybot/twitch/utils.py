@@ -165,26 +165,30 @@ def download_song_request(vid):
 def change_playlist(s,user,message,proc):
     if(isOp(user)):
         message=message.strip()
-        playlist_id=-1
+        playlist_ids=[]
         playlist_name=None
         playlist=None
         try:
-            playlist_id=int(message)
+            playlist_ids=[int(x) for x in message.split()]
         except:
             playlist_name=message
-        if playlist_id >= 0:
-            # playlists (id INTEGER PRIMARY KEY, playlist_name TEXT, user_added TEXT)
-            playlist=music_db.get_playlist_by_id(playlist_id)
-            if playlist:
-                music_db.add_playlist_request(playlist)
-            else:
-                chat(sock,"crunkybot","No playlist with id"+`playlist_id`)
-                return None
+        if playlist_ids:
+            playlists=[]
+            for playlist_id in playlist_ids:
+                # playlists (id INTEGER PRIMARY KEY, playlist_name TEXT, user_added TEXT)
+                playlist=music_db.get_playlist_by_id(playlist_id)
+                if playlist:
+                    playlists.append(playlist)
+                else:
+                    chat(sock,"crunkybot","No playlist with id"+`playlist_id`)
+                    return None
+            chat(s,"crunkybot","Playlist changed to mix of "+",".join([x.playlist_name_ for x in playlists]))
+            music_db.add_playlists_request(playlists)
         else:
             if playlist_name:
                 playlist=music_db.get_playlist_by_name(playlist_name)
-        music_db.add_playlist_request(playlist)
-        chat(s,"crunkybot","Playlist changed to: "+playlist.playlist_name_+".")
+            music_db.add_playlist_request(playlist)
+            chat(s,"crunkybot","Playlist changed to: "+playlist.playlist_name_+".")
 
 # Download youtube song and add to request list.
 def commit_song_request(conn, user, vid, vidid, title):
@@ -229,7 +233,7 @@ def skip_song(sock,user,proc):
 def list_playlists(sock,user):
     if isOp(user) or user.lower() == "cockeyedgaming":
         playlists=music_db.get_playlists()
-        playlists=playlists[:(min(len(playlists),5))]
+        playlists=playlists[:(min(len(playlists),10))]
         chat_str="Playlists: "+",".join([`p.rid_`+": "+p.playlist_name_[:(min(len(p.playlist_name_),8))] for p in playlists])
         chat(sock,user,chat_str)
     

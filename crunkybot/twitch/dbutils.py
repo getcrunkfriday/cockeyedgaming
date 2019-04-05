@@ -196,7 +196,7 @@ class MusicDB:
 		cur = self.connection_.cursor()
 		cur.execute('''CREATE TABLE IF NOT EXISTS tracks(id INTEGER PRIMARY KEY, playlist_id INTEGER, youtube_id TEXT, title TEXT, file_location TEXT, user_added TEXT, date_added DATE, num_plays INT)''')
 		cur.execute('''CREATE TABLE IF NOT EXISTS requests(id INTEGER PRIMARY KEY, playlist_id INTEGER, youtube_id TEXT, title TEXT, file_location TEXT, user_added TEXT, date_added DATE)''')
-		cur.execute('''CREATE TABLE IF NOT EXISTS playlist_requests (id INTEGER PRIMARY KEY, playlist_id INTEGER)''')
+		cur.execute('''CREATE TABLE IF NOT EXISTS playlist_requests (id INTEGER PRIMARY KEY, playlist_id INTEGER, num_requests INTEGER)''')
 		cur.execute('''CREATE TABLE IF NOT EXISTS playlists(id INTEGER PRIMARY KEY, playlist_name TEXT, user_added TEXT, UNIQUE(playlist_name))''')
 		self.connection_.commit()
 	def close(self):
@@ -301,34 +301,50 @@ class MusicDB:
 		self.connection_.commit()
 		self.close()
 		return tracks
-	def add_playlist_request(self,playlist):
+	def add_playlist_request(self,playlist,num_requests=1):
 		self.open()
 		cur=self.connection_.cursor()
-		cur.execute('''INSERT INTO playlist_requests(playlist_id) VALUES(?)''',(playlist.rid_,))
+		cur.execute('''INSERT INTO playlist_requests(playlist_id,num_requests) VALUES(?,?)''',(playlist.rid_,num_requests))
 		self.connection_.commit()
 		self.close()
 		return True
+        def add_playlists_request(self,playlists):
+                for playlist in playlists:
+                        self.add_playlist_request(playlist,len(playlists))
+                return True
 
 	def pop_playlist_request(self):
 		# Make a "Pop" method that gets the next playlist and deletes it from the DB.
 		self.open()
 		cur=self.connection_.cursor()
 		cur.execute('''SELECT * FROM playlist_requests''')
-		row = cur.fetchone()
-		if row:
-			playlist_id=row[1]
-			cur.execute('''DELETE FROM playlist_requests WHERE playlist_id=?''', (playlist_id,))
-			self.connection_.commit()
-			cur.execute('''SELECT * FROM tracks WHERE playlist_id=?''', (playlist_id,))
-			pl_rows=cur.fetchall()
-			tracks=[]
-			for pl_row in pl_rows:
-				tracks.append(Track(*pl_row[1:]))
+		rows = cur.fetchall()
+		if rows:
+                        tracks=[]
+                        playlist_ids=[]
+                        num_playlists=rows[0][2]
+                        #print num_playlists,"playlists being mixed"
+                        for i in range(num_playlists):
+                                playlist_request_id=rows[i][0]
+			        playlist_id=rows[i][1]
+                                playlist_ids.append(playlist_id)
+			        cur.execute('''DELETE FROM playlist_requests WHERE id=?''', (playlist_request_id,))
+			        self.connection_.commit()
+			        cur.execute('''SELECT * FROM tracks WHERE playlist_id=?''', (playlist_id,))
+			        pl_rows=cur.fetchall()
+			        for pl_row in pl_rows:
+				        tracks.append(Track(*pl_row[1:]))
 			self.close()
-			return tracks
+			return (playlist_ids,tracks)
 		self.close()
 		return None
-	
+
+        def purge_playlist_requests(self):
+                self.open()
+                cur = self.connection_.cursor()
+                cur.execute('''DROP TABLE playlist_requests''')
+                self.connection_.commit()
+                self.close()
 	def purge_requests(self):
 		self.open()
 		cur=self.connection_.cursor()

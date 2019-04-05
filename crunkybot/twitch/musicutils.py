@@ -141,3 +141,11 @@ if __name__ == "__main__":
             playlists=db.get_playlists()
             for p in playlists:
                 print p.rid_,":",p.playlist_name_
+        elif sys.argv[1] == "addcustomsong":
+            playlist=Playlist("Metal","cockeyedgaming")
+            res,rid=db.add_playlist(playlist)
+            track=Track(rid,"None","Ash Plissken - I'm a Dwarf",dl_location+"/Ash_Plissken_-_Im_a_Dwarf.mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
+            res,track_rid=db.add_track_to_playlist(track)
+            print "Track",track_rid,track.title_,"added to DB(",track.file_location_,")"
+        elif sys.argv[1] == "ppr":
+            db.purge_playlist_requests()

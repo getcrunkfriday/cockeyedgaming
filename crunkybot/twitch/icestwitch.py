@@ -15,13 +15,16 @@ db_location="/home/andrew/dbs/crunky.db"
 music_db=db.MusicDB(db_location)
 tplaylist=[]
 trequests=[]
-tplaylist_id=3
+tplaylist_id=[3]
 tcurrent_track=""
 tuser_added=""
 
 def ices_init():
     global music_db
-    tracks=music_db.get_tracks(tplaylist_id)
+    tracks=[]
+    for pid in tplaylist_id:
+        for x in music_db.get_tracks(pid):
+            tracks.append(x)
     tplaylist=[(track.title_,track.file_location_) for track in tracks]
     shuffle(tplaylist)
     #for t in tplaylist:
@@ -57,9 +60,10 @@ def ices_get_next():
     # Check playlist requests.
     new_pl=music_db.pop_playlist_request()
     if new_pl:
-        tplaylist=[(track.title_,track.file_location_) for track in new_pl]
+        tplaylist=[(track.title_,track.file_location_) for track in new_pl[1]]
+        #print tplaylist
         shuffle(tplaylist)
-        tplaylist_id=new_pl[0].playlist_id_
+        tplaylist_id=new_pl[0]
     # Check request table.
     requests=music_db.get_track_requests()
     next_track = None
@@ -82,7 +86,10 @@ def ices_get_next():
     # Shuffle the playlist.
     else:
         print "Reshuffling playlist."
-        tracks=music_db.get_tracks(tplaylist_id)
+        tracks=[]
+        for pid in tplaylist_id:
+            for x in music_db.get_tracks(pid):
+                tracks.append(x)
         tplaylist=[(track.title_,track.file_location_) for track in tracks]
         shuffle(tplaylist)
         track=tplaylist.pop()
