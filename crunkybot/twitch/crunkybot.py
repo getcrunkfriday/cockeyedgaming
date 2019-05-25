@@ -98,7 +98,12 @@ def check_download_queue():
                     utils.commit_song_request(conn,current_request_user,current_request_vid,current_request_vidid,current_request_title)
                     complete_threads.append(d)
             for t in complete_threads:
-                del download_queue[t]
+                try:
+                    del download_queue[t]
+                except Exception as e:
+                    print "Unexpected error:", e
+                    continue
+
 
 def main(debug):
     # Networking.
