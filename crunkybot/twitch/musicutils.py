@@ -68,8 +68,7 @@ def get_playlist_info(playlist):
                 vidid=id_tuple.split()[0]
                 title=" ".join(id_tuple.split()[1:])
                 songs.append((vidid,title))
-        return songs
-                
+        return songs   
 
 def download_vid(vid):
     with youtube_dl.YoutubeDL(dl_vid_options) as ydl:
@@ -81,6 +80,53 @@ def download_playlist(pl,dl_location=dl_location):
         ydl.download([pl])
     return True
 
+def get_channel_id(channel_name):
+    youtube = build(cfg.YOUTUBE_API_SERVICE_NAME, cfg.YOUTUBE_API_VERSION,
+                developerKey=cfg.DEVELOPER_KEY)
+    channel_response = youtube.channels().list(
+        part="id",
+        forUsername=channel_name
+    ).execute()
+    print(channel_response)
+    return channel_response['items'][0]['id']
+
+def get_playlists_for_channel_id(channel_id):
+    youtube = build(cfg.YOUTUBE_API_SERVICE_NAME, cfg.YOUTUBE_API_VERSION,
+                developerKey=cfg.DEVELOPER_KEY)
+    playlist_response = youtube.playlists()
+    req = playlist_response.list(
+        part="snippet",
+        maxResults=50,
+        channelId=channel_id
+    )
+    videos=[]
+    while (req):
+        res = req.execute()
+        for i in res['items']:
+            title = i['snippet']['title']
+            print('title=',title)
+        req= playlist_response.list_next(req, res)
+    return videos
+
+def get_songs_for_playlist(playlist):
+    youtube = build(cfg.YOUTUBE_API_SERVICE_NAME, cfg.YOUTUBE_API_VERSION,
+                developerKey=cfg.DEVELOPER_KEY)
+    playlist_item_response = youtube.playlistItems().list(
+        part="contentDetails,status",
+        playlistId=playlist,
+        maxResults=50
+    )
+    playlist_videos=[]
+    while playlist_item_response:
+        playlist_response_ex = playlist_item_response.execute()
+
+        for entry in playlist_response_ex.get("items", []):
+            playlist_videos.append(entry["contentDetails"]["videoId"])
+        playlist_item_response = youtube.playlistItems().list_next(playlist_item_response, playlist_response_ex)
+    return playlist_videos
+    
+
+    
 def youtube_search(search_str):
     def youtube_search(vid):
         print vid
@@ -114,6 +160,8 @@ if __name__ == "__main__":
     db=MusicDB(db_location)
     if len(sys.argv) >= 2:
         print sys.argv
+        if sys.argv[1] == "test":
+            print(get_playlists_for_channel_id("UCAUBes2LJsXAYRSmq7zwF8g"))
         if sys.argv[1] == "addplaylist":
             # Arg 1: addplaylist
             # Arg 2: [youtube_playlist]
@@ -141,6 +189,12 @@ if __name__ == "__main__":
             playlists=db.get_playlists()
             for p in playlists:
                 print p.rid_,":",p.playlist_name_
+        elif sys.argv[1] == "listvideos":
+            playlist_id = sys.argv[2]
+            videos = get_songs_for_playlist(playlist_id)
+            for video in videos:
+                print video
+            print len(videos)
         elif sys.argv[1] == "addcustomsong":
             playlist=Playlist("Metal","cockeyedgaming")
             res,rid=db.add_playlist(playlist)
