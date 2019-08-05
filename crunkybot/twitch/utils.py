@@ -21,12 +21,11 @@ CURR_RAFFLE=[]
 raffle_live=False
 raffle_title=""
 youtube_dl="youtube-dl -x --audio-format mp3 --prefer-ffmpeg"
-#https://m.youtube.com/watch?v=dJ7bquKFC4E
 youtube_re_str="(http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)|(http(s)?://www\.youtube\.com/watch/([-A-Za-z0-9_])+)|(http(s)?://youtu\.be/([-A-Za-z0-9_])+)|(http(s)://m\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)"
 youtube_re=re.compile(youtube_re_str)
 dl_location=cfg.MUSIC_DOWNLOAD_DIR
-db_location=cfg.DB_PATH
-music_db_location=cfg.MUSIC_DB
+db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_COMMANDDB, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
+music_db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_MUSICDB, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
 viewer_queue=deque([])
 
 command_db=CommandDB(db_location)
@@ -71,6 +70,7 @@ def remove_chatcomm(sock,command):
     if command[0] == "!":
         command=command[1:]
     command_obj=command_db.get_command(command)
+    print command_obj
     if command_obj:
         command_db.remove_command(command_obj)
         chat(sock,"crunkybot",command+" successfully removed!")
@@ -200,7 +200,7 @@ def commit_song_request(conn, user, vid, vidid, title):
     if m:
         c=conn.cursor()
         try:
-            c.execute("INSERT INTO requests(youtube_id,title,file_location,user_added,date_added) VALUES(?,?,?,?,?)",(vid,title,cfg.MUSIC_DOWNLOAD_DIR+"/"+vidid+".mp3",user,time.strftime("%Y-%m-%d")))
+            c.execute("INSERT INTO requests(youtube_id,title,file_location,user_added,date_added) VALUES(%s,%s,%s,%s,%s)",(vid,title,cfg.MUSIC_DOWNLOAD_DIR+"/"+vidid+".mp3",user,time.strftime("%Y-%m-%d")))
             print 'executing'
             conn.commit()
             print 'committed'
