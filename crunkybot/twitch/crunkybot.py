@@ -122,6 +122,7 @@ def main(debug):
         playlistProc=icescontroller.PlaylistProcess()
     # Loads "!" commands.
     commands= utils.command_db.load_commands()
+    print commands
     # Loads auto-shoutouts.
     shoutouts=utils.command_db.load_shoutouts()
     print commands
@@ -176,7 +177,6 @@ def main(debug):
             print e,exc_type,fname,exc_tb.tb_lineno
                                             
 if __name__ == "__main__":
-    import initialize_db as idb
     debug=False
     if len(sys.argv) > 1:
         if "--no-sr" in sys.argv:
