@@ -24,7 +24,8 @@ youtube_dl="youtube-dl -x --audio-format mp3 --prefer-ffmpeg"
 youtube_re_str="(http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)|(http(s)?://www\.youtube\.com/watch/([-A-Za-z0-9_])+)|(http(s)?://youtu\.be/([-A-Za-z0-9_])+)|(http(s)://m\.youtube\.com/watch\?v=([-A-Za-z0-9_])+)"
 youtube_re=re.compile(youtube_re_str)
 dl_location=cfg.MUSIC_DOWNLOAD_DIR
-db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_COMMANDDB, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
+# db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_COMMANDDB_COCKEYEDGAMING, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
+db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_COMMANDDB_GETCRUNKFRIDAY, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
 music_db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_MUSICDB, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
 viewer_queue=deque([])
 
@@ -58,11 +59,14 @@ def execute_command(sock,username,message,command):
             action_str=re.sub("%"+m,args[m],action_str,1)
     ret = {}
     if ((command["permission"]=="MODERATOR" and isOp(username)) or
-        (command["permission"]=="OWNER" and username.lower() == "cockeyedgaming") or
+        (command["permission"]=="OWNER" and username.lower() == cfg.TWITCH_CHAN) or
         (command["permission"]=="ALL")):
+        print username.lower()+","+cfg.TWITCH_CHAN
         print "Trying to evaluate..."
         ret=eval(action_str)
     else:
+        print username.lower()+","+cfg.TWITCH_CHAN
+        print username.lower() == cfg.TWITCH_CHAN
         print username,"does not have permission to execute",command["action"]
     return ret
 
@@ -223,7 +227,7 @@ def current_song(sock, user):
         return ""
 
 def skip_song(sock,user,proc):
-    if isOp(user) or user.lower() == "cockeyedgaming":
+    if isOp(user) or user.lower() == cfg.TWITCH_CHAN:
         currsong=current_song(sock,user)
         print currsong
         if currsong:
@@ -231,7 +235,7 @@ def skip_song(sock,user,proc):
             chat(sock,user,currsong+" skipped...")
 
 def list_playlists(sock,user):
-    if isOp(user) or user.lower() == "cockeyedgaming":
+    if isOp(user) or user.lower() == cfg.TWITCH_CHAN:
         playlists=music_db.get_playlists()
         playlists=playlists[:(min(len(playlists),10))]
         chat_str="Playlists: "+",".join([`p.rid_`+": "+p.playlist_name_[:(min(len(p.playlist_name_),8))] for p in playlists])
@@ -257,7 +261,7 @@ def insult(sock,user,message,insults):
 
 
 def shoutout(sock,user,message):
-    if isOp(user) or user.lower() == "cockeyedgaming":
+    if isOp(user) or user.lower() == cfg.TWITCH_CHAN:
         streamer=message.strip()
         chat(sock,user,"Have you heard of our friend "+streamer+"?? Check them out over at twitch.tv/"+streamer+" !")
 # Function: chat
@@ -294,7 +298,7 @@ def timeout(sock, user, seconds=600):
 def threadFillOpList():
     while True:
         try:
-            url = "http://tmi.twitch.tv/group/user/cockeyedgaming/chatters"
+            url = "http://tmi.twitch.tv/group/user/"+cfg.TWITCH_CHAN+"/chatters"
             req = urllib2.Request(url, headers={"accept": "*/*"})
             response = urllib2.urlopen(req).read()
             if response.find("502 Bad Gateway") == -1:
@@ -347,15 +351,15 @@ def threadFillFollowerList():
 # Function isOP
 # Determines if user has elevated privilege (used for things like !rafflestop)
 def isOp(user):
-    return user in cfg.oplist or user.lower() == "cockeyedgaming"
+    return user in cfg.oplist or user.lower() == cfg.TWITCH_CHAN
 
 # Function isFollower
 # Determins if user is a follower.
 def isFollower(user):
-    return user.lower() in cfg.followerlist or user.lower() == "cockeyedgaming"
+    return user.lower() in cfg.followerlist or user.lower() == cfg.TWITCH_CHAN
 
 def isSubscriber(user):
-    return user.lower() in cfg.sublist or user.lower() == "cockeyedgaming"
+    return user.lower() in cfg.sublist or user.lower() == cfg.TWITCH_CHAN
 
 # RAFFLE FUNCTIONS
 def add_to_raffle(sock,user):
@@ -392,9 +396,9 @@ def raffle_start(sock, user, raffle_info):
 def raffle_draw(sock, user):
     global raffle_live,CURR_RAFFLE,raffle_title
     if isOp(user) and raffle_live and CURR_RAFFLE:
-        this_raffle=[x for x in CURR_RAFFLE if isFollower(x)]
+        this_raffle=[x for x in CURR_RAFFLE]
         draw=random.sample(this_raffle,1)[0]
-        follower="(who has not yet joined the Cockeyed Cult)"
+        follower="(who is not.. yet.. one of us...)"
         if isFollower(draw):
             follower="(who deserves their free things!)"
         chat(sock, user, "Congrats to "+draw+" "+follower+"... You've won "+raffle_title+"! (Now gently brush off the haters)")
@@ -465,8 +469,8 @@ test_uptime_data={
 }
 def uptime(sock):
     try:
-        strT=cfg.TWITCH_V2_STREAMS_URL+"?user_id=cockeyedgaming"
-        r=requests.get(cfg.TWITCH_V2_STREAMS_URL+"?user_login=CockeyedGaming",headers=cfg.TWITCH_V2_HEADERS)
+        strT=cfg.TWITCH_V2_STREAMS_URL+"?user_id="+cfg.TWITCH_CHAN
+        r=requests.get(cfg.TWITCH_V2_STREAMS_URL+"?user_login="+cfg.TWITCH_CHAN,headers=cfg.TWITCH_V2_HEADERS)
         json_dict=json.loads(r.text)
         #json_dict=test_uptime_data
         #print "here"

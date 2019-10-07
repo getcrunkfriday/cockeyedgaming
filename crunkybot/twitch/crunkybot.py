@@ -52,7 +52,7 @@ download_queue=[]
 legendaries=[]
 def add_legendary(s,u,m):
     global legendaries
-    if utils.isOp(u) or u.lower() == "cockeyedgaming":
+    if utils.isOp(u) or u.lower() == cfg.TWITCH_CHAN:
         legendaries.append(m)
         utils.chat(s,u,m+" added to legendaries!")
 
@@ -61,7 +61,7 @@ def get_legendaries(s,u,m):
 
 def toggle_sr(s,u,m):
     global sr_enabled
-    if utils.isOp(u) or u.lower() == "cockeyedgaming":
+    if utils.isOp(u) or u.lower() == cfg.TWITCH_CHAN:
         if sr_enabled:
             sr_enabled=False
         else:
@@ -181,7 +181,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         if "--no-sr" in sys.argv:
             sr_enabled=False
-        if "--initialize-db":
+        if "--initialize-db" in sys.argv:
             utils.command_db.init_db("commands.json")
+        if "--channel" in sys.argv:
+            assert len(sys.argv) >= sys.argv.index("--channel") + 2
+            cfg.TWITCH_CHAN = sys.argv[sys.argv.index("--channel") + 1]
     main(debug)
     
