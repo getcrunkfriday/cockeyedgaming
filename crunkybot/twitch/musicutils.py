@@ -81,6 +81,82 @@ def download_playlist(pl,dl_location=dl_location):
         ydl.download([pl])
     return True
 
+def get_channel_id(channel_name):
+    youtube = build(cfg.YOUTUBE_API_SERVICE_NAME, cfg.YOUTUBE_API_VERSION,
+                developerKey=cfg.DEVELOPER_KEY)
+    channel_response = youtube.channels().list(
+        part="id",
+        forUsername=channel_name
+    ).execute()
+    print(channel_response)
+    return channel_response['items'][0]['id']
+
+def get_playlists_for_channel_id(channel_id):
+    youtube = build(cfg.YOUTUBE_API_SERVICE_NAME, cfg.YOUTUBE_API_VERSION,
+                developerKey=cfg.DEVELOPER_KEY)
+    playlist_response = youtube.playlists()
+    req = playlist_response.list(
+        part="snippet",
+        maxResults=50,
+        channelId=channel_id
+    )
+    playlists=[]
+    while (req):
+        res = req.execute()
+        for i in res['items']:
+            print i['snippet'].keys()
+            title = i['snippet']['title']
+            playlists.append((i['id'], title))
+            print('title=',title,'id=',i['id'])
+        req= playlist_response.list_next(req, res)
+    return playlists
+
+def get_songs_for_playlist(playlist):
+    youtube = build(cfg.YOUTUBE_API_SERVICE_NAME, cfg.YOUTUBE_API_VERSION,
+                developerKey=cfg.DEVELOPER_KEY)
+    playlist_item_response = youtube.playlistItems().list(
+        part="contentDetails,status,snippet",
+        playlistId=playlist,
+        maxResults=50
+    )
+    playlist_videos=[]
+    while playlist_item_response:
+        playlist_response_ex = playlist_item_response.execute()
+        for entry in playlist_response_ex.get("items", []):
+            playlist_videos.append((entry["contentDetails"]["videoId"], entry['snippet']["title"]))
+        playlist_item_response = youtube.playlistItems().list_next(playlist_item_response, playlist_response_ex)
+    return playlist_videos
+
+def sync_playlists_to_db(db, channel_id):
+    playlists=get_playlists_for_channel_id(channel_id)
+    for playlist in playlists:
+        yt_tracks = get_songs_for_playlist(playlist[0])
+        db_playlist = db.get_playlist_by_youtube_id(playlist[0])
+        if db_playlist:
+            print "Playlist", playlist[1], "found. Syncing from YouTube..."
+            playlist_songs = [t.youtube_id for t in db.get_tracks(db_playlist.rid_)]
+            for ytt in yt_tracks:
+                if ytt[0] not in playlist_songs:
+                    # Check if track exists first, before downloading.
+                    download_vid("https://www.youtube.com/watch?v="+ytt[0])
+                    track=Track(db_playlist.rid_,ytt[0],ytt[1],dl_location+"/"+ytt[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
+                    res,track_rid=db.add_track_to_playlist(track)
+                    print "Track",track_rid,track.title_,"added to DB (",track.file_location_,")"
+        else:
+            print "Playlist", playlist[1], "not found. Downloading..."
+            download_playlist("https://www.youtube.com/watch?v="+yt_tracks[0][0]+"&list="+playlist[0])
+            playlist=Playlist(playlist[1],"cockeyedgaming",playlist[0])
+            res,rid=db.add_playlist(playlist)
+            if res:
+                playlist.set_id(rid)
+                for ytt in yt_tracks:
+                    # Check if track exists first, before downloading.
+                    download_vid("https://www.youtube.com/watch?v="+ytt[0])
+                    track=Track(rid,ytt[0],ytt[1],dl_location+"/"+ytt[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
+                    tres,track_rid=db.add_track_to_playlist(track)
+                    print "Track",track_rid,track.title_,"added to DB (",track.file_location_,")"
+            
+
 def youtube_search(search_str):
     def youtube_search(vid):
         print vid
@@ -114,6 +190,9 @@ if __name__ == "__main__":
     db=MusicDB(db_location)
     if len(sys.argv) >= 2:
         print sys.argv
+        if sys.argv[1] == "test":
+            print(get_playlists_for_channel_id("UCAUBes2LJsXAYRSmq7zwF8g"))
+            sync_playlists_to_db(db, "UCAUBes2LJsXAYRSmq7zwF8g")
         if sys.argv[1] == "addplaylist":
             # Arg 1: addplaylist
             # Arg 2: [youtube_playlist]
