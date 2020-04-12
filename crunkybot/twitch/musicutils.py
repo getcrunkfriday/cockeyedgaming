@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
-from sound_downloader.downloader import YoutubeAudioDownloader
+# from sound_downloader.downloader import YoutubeAudioDownloader
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
@@ -22,7 +22,7 @@ youtube_re_str="http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+"
 youtube_re=re.compile(youtube_re_str)
 dl_location=cfg.MUSIC_DOWNLOAD_DIR
 pl_location=cfg.MUSIC_PLAYLIST
-db_location=cfg.MUSIC_DB
+db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_MUSICDB, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
 
 info_options={'outtmpl': '%(id)s %(title)s', 'ignoreerrors':True}
 dl_vid_options  ={
@@ -68,8 +68,7 @@ def get_playlist_info(playlist):
                 vidid=id_tuple.split()[0]
                 title=" ".join(id_tuple.split()[1:])
                 songs.append((vidid,title))
-        return songs
-                
+        return songs   
 
 def download_vid(vid):
     with youtube_dl.YoutubeDL(dl_vid_options) as ydl:
@@ -199,7 +198,7 @@ if __name__ == "__main__":
             # Arg 3: playlist name
             playlist_url=sys.argv[2]
             playlist_name=" ".join(sys.argv[3:])
-            playlist=Playlist(playlist_name,"cockeyedgaming")
+            playlist=Playlist(playlist_name,"cockeyedgaming","PLmPSvm77oH5sCBI2t1IE9pyBcah1LeHY7")
             res,rid=db.add_playlist(playlist)
             if res:
                 playlist.set_id(rid)
@@ -220,6 +219,12 @@ if __name__ == "__main__":
             playlists=db.get_playlists()
             for p in playlists:
                 print p.rid_,":",p.playlist_name_
+        elif sys.argv[1] == "listvideos":
+            playlist_id = sys.argv[2]
+            videos = get_songs_for_playlist(playlist_id)
+            for video in videos:
+                print video
+            print len(videos)
         elif sys.argv[1] == "addcustomsong":
             playlist=Playlist("Metal","cockeyedgaming")
             res,rid=db.add_playlist(playlist)
