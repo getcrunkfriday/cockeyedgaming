@@ -40,16 +40,20 @@ base_commands = {
     # Stream commands
     #"!startstream" : lambda s,u,**kw: start_stream(u),
     "uptime" : lambda s,**kw: utils.uptime(s),
-    "earthfall": lambda s,u,**kw: utils.chat(s, u,"Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
-    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m),
-    "addlegend": lambda s,u,m,**kw: add_legendary(s,u,m),
-    "legendaries": lambda s,u,m,**kw: get_legendaries(s,u,m)
+    # "earthfall": lambda s,u,**kw: utils.chat(s, u,"Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
+    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
+    # "addlegend": lambda s,u,m,**kw: add_legendary(s,u,m),
+    # "legendaries": lambda s,u,m,**kw: get_legendaries(s,u,m),
+    # "spill": lambda s,u,m,**kw: add_deaths(s,u,m),
+    # "unspill": lambda s,u,m,**kw: remove_death(s,u,m),
+    # "spills": lambda s,u,m,**kw: get_deaths(s,u,m)
     #"!togglesr": lambda s,u,m,**kw: toggle_sr(s,u,m)
     #"!commands": lambda s,**kw: chat_commands(s)
     }
 
 download_queue=[]
 legendaries=[]
+deaths = 0
 def add_legendary(s,u,m):
     global legendaries
     if utils.isOp(u) or u.lower() == "cockeyedgaming":
@@ -66,6 +70,21 @@ def toggle_sr(s,u,m):
             sr_enabled=False
         else:
             sr_enabled=True
+
+def add_deaths(s,u,m):
+    global deaths
+    if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "firezerg_":
+        deaths += 1
+        utils.chat(s,u,"Ash has spilled her drink "+`deaths`+" times. What a clumsy bitch.")
+
+def remove_death(s,u,m):
+    global deaths
+    if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "firezerg_":
+        deaths -= 1 if deaths > 0 else 0
+        utils.chat(s,u,"JK JK , she saved it. Only "+`deaths`+" spills!")
+
+def get_deaths(s,u,m):
+    utils.chat(s,u,"Ash has spilled her drink "+`deaths`+" times...")
 
 def song_request(sock,username,message):
     global download_queue
