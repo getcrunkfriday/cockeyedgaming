@@ -8,14 +8,16 @@ from random import shuffle
 
 sys.path.append("/home/andrew/Git/cockeyedgaming/crunkybot/twitch")
 import dbutils as db
+import crunkycfg as cfg
 
 #global playlist,requests,current_track
 #global db,con,cur
-db_location="/home/andrew/dbs/crunky.db"
+
+db_location=cfg.MUSIC_DB
 music_db=db.MusicDB(db_location)
 tplaylist=[]
 trequests=[]
-tplaylist_id=[3]
+tplaylist_id=[1]
 tcurrent_track=""
 tuser_added=""
 

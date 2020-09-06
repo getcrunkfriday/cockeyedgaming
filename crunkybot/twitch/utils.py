@@ -26,7 +26,7 @@ youtube_re=re.compile(youtube_re_str)
 dl_location=cfg.MUSIC_DOWNLOAD_DIR
 # db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_COMMANDDB_COCKEYEDGAMING, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
 db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_COMMANDDB_GETCRUNKFRIDAY, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
-music_db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_MUSICDB, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
+music_db_location=cfg.MUSIC_DB
 viewer_queue=deque([])
 
 command_db=CommandDB(db_location)
@@ -165,6 +165,9 @@ def download_song_request(vid):
         musicutils.download_vid(vid)
     except Exception,e:
         print "Soft failure.",e
+def download_song_requests(vids):
+    for vid in vids:
+        download_song_request(vid)
 # Function: song_request
 def change_playlist(s,user,message,proc):
     if(isOp(user)):
@@ -204,7 +207,7 @@ def commit_song_request(conn, user, vid, vidid, title):
     if m:
         c=conn.cursor()
         try:
-            c.execute("INSERT INTO requests(youtube_id,title,file_location,user_added,date_added) VALUES(%s,%s,%s,%s,%s)",(vid,title,cfg.MUSIC_DOWNLOAD_DIR+"/"+vidid+".mp3",user,time.strftime("%Y-%m-%d")))
+            c.execute("INSERT INTO requests(youtube_id,title,file_location,user_added,date_added) VALUES(?,?,?,?,?)",(vid,title,cfg.MUSIC_DOWNLOAD_DIR+"/"+vidid+".mp3",user,time.strftime("%Y-%m-%d")))
             print 'executing'
             conn.commit()
             print 'committed'
@@ -235,10 +238,13 @@ def skip_song(sock,user,proc):
             chat(sock,user,currsong+" skipped...")
 
 def list_playlists(sock,user):
+    def filter_name(playlist_name):
+        return playlist_name.replace('[CrunkyBot]', '')
     if isOp(user) or user.lower() == cfg.TWITCH_CHAN:
         playlists=music_db.get_playlists()
         playlists=playlists[:(min(len(playlists),10))]
-        chat_str="Playlists: "+",".join([`p.rid_`+": "+p.playlist_name_[:(min(len(p.playlist_name_),8))] for p in playlists])
+        playlist_names = [filter_name(p.playlist_name_) for p in playlists]
+        chat_str="Playlists: "+",".join([`playlists[p].rid_`+": "+playlist_names[p][:(min(len(playlist_names[p]),8))] for p in range(len(playlist_names))])
         chat(sock,user,chat_str)
     
 # Function: load_insults
