@@ -22,7 +22,9 @@ youtube_re_str="http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+"
 youtube_re=re.compile(youtube_re_str)
 dl_location=cfg.MUSIC_DOWNLOAD_DIR
 pl_location=cfg.MUSIC_PLAYLIST
-db_location=DBLocation(cfg.AWS_DB_HOST, cfg.AWS_DB_PORT, cfg.AWS_DB_MUSICDB, cfg.AWS_DB_USERNAME, cfg.AWS_DB_PASSWORD)
+# db_location=cfg.MUSIC_DB
+db_location = "/tmp/dbs/test_db.db"
+playlist_tag = "[CrunkyBot]"
 
 info_options={'outtmpl': '%(id)s %(title)s', 'ignoreerrors':True}
 dl_vid_options  ={
@@ -46,6 +48,8 @@ dl_playlist_options = {
         'preferredcodec': 'mp3'
     }]
 }
+print "vid", dl_vid_options
+print "vid", dl_playlist_options
 
 def get_vid_info(vid):
     with youtube_dl.YoutubeDL(info_options) as ydl:
@@ -105,7 +109,8 @@ def get_playlists_for_channel_id(channel_id):
         for i in res['items']:
             print i['snippet'].keys()
             title = i['snippet']['title']
-            playlists.append((i['id'], title))
+            if playlist_tag in title:
+                playlists.append((i['id'], title))
             print('title=',title,'id=',i['id'])
         req= playlist_response.list_next(req, res)
     return playlists
@@ -126,34 +131,46 @@ def get_songs_for_playlist(playlist):
         playlist_item_response = youtube.playlistItems().list_next(playlist_item_response, playlist_response_ex)
     return playlist_videos
 
-def sync_playlists_to_db(db, channel_id):
-    playlists=get_playlists_for_channel_id(channel_id)
+def sync_playlists_to_db(db, channel_id, playlists=[]):
+    if len(playlists) == 0:
+        playlists=get_playlists_for_channel_id(channel_id)
+    playlists_to_add = []
+    tracks_to_add = []
+    tracks_to_remove = []
     for playlist in playlists:
         yt_tracks = get_songs_for_playlist(playlist[0])
         db_playlist = db.get_playlist_by_youtube_id(playlist[0])
         if db_playlist:
             print "Playlist", playlist[1], "found. Syncing from YouTube..."
-            playlist_songs = [t.youtube_id for t in db.get_tracks(db_playlist.rid_)]
+            playlist_tracks = db.get_tracks(db_playlist.rid_)
+            playlist_songs = [t.youtube_id_ for t in playlist_tracks]
             for ytt in yt_tracks:
                 if ytt[0] not in playlist_songs:
                     # Check if track exists first, before downloading.
-                    download_vid("https://www.youtube.com/watch?v="+ytt[0])
+                    # download_vid("https://www.youtube.com/watch?v="+ytt[0])
                     track=Track(db_playlist.rid_,ytt[0],ytt[1],dl_location+"/"+ytt[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
-                    res,track_rid=db.add_track_to_playlist(track)
-                    print "Track",track_rid,track.title_,"added to DB (",track.file_location_,")"
+                    # res,track_rid=db.add_track_to_playlist(track)
+                    print "Track",track.rid_,track.title_,"added to DB (",track.file_location_,")"
+                    tracks_to_add.append(track)
+            for playlist_track in playlist_tracks:
+                if playlist_track.youtube_id_ not in [ytt[0] for ytt in yt_tracks]:
+                    # db.remove_track_from_playlist(db_playlist.rid_, playlist_track)
+                    # os.remove(playlist_track.file_location_)
+                    tracks_to_remove.append(track)
+                    print "Track",playlist_track.youtube_id_,"removed from DB (and file system)."
         else:
             print "Playlist", playlist[1], "not found. Downloading..."
-            download_playlist("https://www.youtube.com/watch?v="+yt_tracks[0][0]+"&list="+playlist[0])
-            playlist=Playlist(playlist[1],"cockeyedgaming",playlist[0])
+            playlists_to_add.append(playlist)
+            # download_playlist("https://www.youtube.com/watch?v="+yt_tracks[0][0]+"&list="+playlist[0])
+            playlist=Playlist(playlist[1],"cockeyedgaming",youtube_id=playlist[0])
             res,rid=db.add_playlist(playlist)
             if res:
                 playlist.set_id(rid)
                 for ytt in yt_tracks:
-                    # Check if track exists first, before downloading.
-                    download_vid("https://www.youtube.com/watch?v="+ytt[0])
                     track=Track(rid,ytt[0],ytt[1],dl_location+"/"+ytt[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
-                    tres,track_rid=db.add_track_to_playlist(track)
-                    print "Track",track_rid,track.title_,"added to DB (",track.file_location_,")"
+                    tracks_to_add.append(track)
+                    print "Track",track.rid_,track.title_,"added to DB (",track.file_location_,")"
+    return (playlists_to_add, tracks_to_add, tracks_to_remove)
             
 
 def youtube_search(search_str):
@@ -190,8 +207,12 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         print sys.argv
         if sys.argv[1] == "test":
-            print(get_playlists_for_channel_id("UCAUBes2LJsXAYRSmq7zwF8g"))
-            sync_playlists_to_db(db, "UCAUBes2LJsXAYRSmq7zwF8g")
+            playlists = get_playlists_for_channel_id("UCAUBes2LJsXAYRSmq7zwF8g")
+            # playlists.append(("PLmPSvm77oH5uXayUShAa2CXy99GiGzSPS", "Test Playlist 1"))
+            for playlist in playlists:
+                print(playlist[1])
+                # print(get_songs_for_playlist(playlist[0]))
+            sync_playlists_to_db(db, "UCAUBes2LJsXAYRSmq7zwF8g", [playlists[0]])
         if sys.argv[1] == "addplaylist":
             # Arg 1: addplaylist
             # Arg 2: [youtube_playlist]

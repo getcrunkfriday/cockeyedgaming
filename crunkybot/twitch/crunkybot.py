@@ -1,5 +1,6 @@
 import crunkycfg as cfg
 import utils
+import musicutils
 import socket
 import re
 import time, thread
@@ -37,11 +38,15 @@ base_commands = {
     "skip" : lambda s,u,proc,**kw : utils.skip_song(s,u,proc),
     "cp" : lambda s,u,m,proc,**kw : utils.change_playlist(s,u,m,proc),
     "playlists" : lambda s,u,m,**kw : utils.list_playlists(s,u),
+    "sync": lambda s,u,**kw : sync_request(u),
     # Stream commands
     #"!startstream" : lambda s,u,**kw: start_stream(u),
     "uptime" : lambda s,**kw: utils.uptime(s),
     # "earthfall": lambda s,u,**kw: utils.chat(s, u,"Want to play Earthfall with us? Help support us as influencers by purchasing through our link! https://bit.ly/2NYsZm2"),
-    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m)
+    "so": lambda s,u,m,**kw: utils.shoutout(s,u,m),
+    "scream": lambda s,u,m,**kw: scream(s,u,m),
+    "noscream": lambda s,u,m,**kw: noscream(s,u,m),
+    "screams": lambda s,u,m,**kw: screams(s,u,m)
     # "addlegend": lambda s,u,m,**kw: add_legendary(s,u,m),
     # "legendaries": lambda s,u,m,**kw: get_legendaries(s,u,m),
     # "spill": lambda s,u,m,**kw: add_deaths(s,u,m),
@@ -54,6 +59,7 @@ base_commands = {
 download_queue=[]
 legendaries=[]
 deaths = 0
+num_screams = 0
 def add_legendary(s,u,m):
     global legendaries
     if utils.isOp(u) or u.lower() == cfg.TWITCH_CHAN:
@@ -86,6 +92,21 @@ def remove_death(s,u,m):
 def get_deaths(s,u,m):
     utils.chat(s,u,"Ash has spilled her drink "+`deaths`+" times...")
 
+def scream(s,u,m):
+    global num_screams
+    if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "getcrunkfriday":
+        num_screams += 1
+        utils.chat(s,u,"Ash just screamed like a little bitch. That's "+`num_screams`+" times now...")
+
+def noscream(s,u,m):
+    global num_screams
+    if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "getcrunkfriday":
+        num_screams -= 1
+        utils.chat(s,u,"Nvm... that was just me. Ash has only screamed "+`num_screams`+" times now...")
+
+def screams(s,u,m):
+    utils.chat(s,u,"Ash has screamed "+`num_screams`+" times now... what a bitch. LUL")
+
 def song_request(sock,username,message):
     global download_queue
     import threading
@@ -94,27 +115,90 @@ def song_request(sock,username,message):
         (vidid,title,url)=(res[0],res[1],res[2])
         download_thread=threading.Thread(target=utils.download_song_request,args=[url])
         download_thread.start()
-        download_queue.append({'thread':download_thread,'user':username,'vid':url,'vidid':vidid,'title':title})
+        download_queue.append({
+            'thread':download_thread,
+            'request_type': 'sr',
+            'user':username,
+            'vid':url,
+            'vidid':vidid,
+            'title':title
+        })
+
+def sync_request(username="cockeyedgaming"):
+    global download_queue
+    import threading
+    from dbutils import MusicDB
+    if not utils.isOp(username):
+        return
+    print("Attempting to sync...")
+    db_location=cfg.MUSIC_DB
+    db=MusicDB(db_location)
+    playlists_to_add, tracks_to_add, tracks_to_remove = musicutils.sync_playlists_to_db(db, cfg.YOUTUBE_PLAYLIST_CHANNEL)
+    # Add playlists.
+    # for p2a in playlists_to_add:
+    #     download_queue.append({
+    #         'thread': None,
+    #         'request_type': 'sync_add_playlist',
+    #         'playlist_id': p2a[0],
+    #         'playlist_name': p2a[1]
+    #     })
+    # Submit downloads for tracks.
+    if len(tracks_to_add) > 0:
+        download_thread=threading.Thread(target=utils.download_song_requests,args=[["https://www.youtube.com/watch?v="+t2a.youtube_id_ for t2a in tracks_to_add]])
+        download_thread.start()
+        download_queue.append({
+            'thread': download_thread,
+            'request_type': 'sync_add_tracks',
+            'tracks': tracks_to_add
+        })
+
+    if len(tracks_to_remove) > 0:
+        # Remove tracks from DB
+        download_queue.append({
+            'thread': None,
+            'request_type': 'sync_remove_tracks',
+            'tracks': tracks_to_remove
+        })
+
                                                                                                                             
 def check_download_queue():
     global download_queue
     import sqlite3 as sql
+    from dbutils import MusicDB
     db_location=cfg.MUSIC_DB
     conn=sql.connect(db_location)
+    db = MusicDB(db_location)
     while True:
         if download_queue:
             complete_threads=[]
             for d in range(len(download_queue)):
                 download=download_queue[d]
-                t=download['thread']
-                if not t.isAlive():
-                    print "Download=",download
-                    current_request_user=download['user']
-                    current_request_vid =download['vid']
-                    current_request_vidid=download['vidid']
-                    current_request_title=download['title']
-                    print "Adding to download queue..."
-                    utils.commit_song_request(conn,current_request_user,current_request_vid,current_request_vidid,current_request_title)
+                if download['request_type'] == 'sr':
+                    t=download['thread']
+                    if not t.isAlive():
+                        print "Download=",download
+                        current_request_user=download['user']
+                        current_request_vid =download['vid']
+                        current_request_vidid=download['vidid']
+                        current_request_title=download['title']
+                        print "Adding to download queue..."
+                        utils.commit_song_request(conn,current_request_user,current_request_vid,current_request_vidid,current_request_title)
+                        complete_threads.append(d)
+                if download['request_type'] == 'sync_add_playlist':
+                    playlist=Playlist(download['playlist_name'],"cockeyedgaming",youtube_id=download['playlist_id'])
+                    res,rid=db.add_playlist(playlist)
+                    complete_threads.append(d)
+                if download['request_type'] == 'sync_add_tracks':
+                    t=download['thread']
+                    if not t.isAlive():
+                        for t2a in download['tracks']:
+                            res,track_rid=db.add_track_to_playlist(t2a)
+                        complete_threads.append(d)
+                if download['request_type'] == 'sync_remove_tracks':
+                    for t2r in download['tracks']:
+                        playlist = db.get_playlist_by_id(t2r.playlist_id_)
+                        db.remove_track_from_playlist(playlist.rid_, t2r)
+                        os.remove(t2r.file_location_)
                     complete_threads.append(d)
             for t in complete_threads:
                 try:
@@ -124,7 +208,7 @@ def check_download_queue():
                     continue
 
 
-def main(debug):
+def main(debug, sync_yt):
     # Networking.
     s=socket.socket()
     s.connect((cfg.TWITCH_HOST, cfg.TWITCH_PORT))
@@ -139,6 +223,8 @@ def main(debug):
     if sr_enabled:
         thread.start_new_thread(check_download_queue,())
         playlistProc=icescontroller.PlaylistProcess()
+    if sync_yt:
+        sync_request()
     # Loads "!" commands.
     commands= utils.command_db.load_commands()
     print commands
@@ -197,6 +283,7 @@ def main(debug):
                                             
 if __name__ == "__main__":
     debug=False
+    sync_yt=False
     if len(sys.argv) > 1:
         if "--no-sr" in sys.argv:
             sr_enabled=False
@@ -205,5 +292,7 @@ if __name__ == "__main__":
         if "--channel" in sys.argv:
             assert len(sys.argv) >= sys.argv.index("--channel") + 2
             cfg.TWITCH_CHAN = sys.argv[sys.argv.index("--channel") + 1]
-    main(debug)
+        if "--sync_yt" in sys.argv:
+            sync_yt = True
+    main(debug, sync_yt)
     
