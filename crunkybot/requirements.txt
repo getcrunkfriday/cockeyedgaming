@@ -38,7 +38,7 @@ PyMySQL==0.6.3
 python-engineio==3.9.2
 python-socketio==4.3.0
 pytz==2019.2
-PyYAML==3.12
+PyYAML==5.4
 redis==3.3.5
 requests==2.22.0
 requests-oauthlib==1.2.0
