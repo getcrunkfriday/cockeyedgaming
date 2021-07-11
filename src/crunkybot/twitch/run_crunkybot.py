@@ -2,16 +2,14 @@ import logging
 import sys
 import os
 import argparse
+from crunkybot.twitch.config import ConfigLoader, MUSIC_DB_LOCATION, YOUTUBE_PLAYLIST_CHANNEL
 
 from typing import List, Dict
 import threading as thread
-from crunkybot.twitch.plugins.plugin import PluginLoader, PluginRequest, Plugin
 from crunkybot.twitch import icescontroller
 import crunkybot.twitch.twitch_utils as twitch_utils
 import threading
-import crunkybot.twitch.utils as utils
-from crunkybot.twitch.musicutils import MusicDB, sync_playlists_to_db
-from crunkybot.twitch.config import ConfigLoader, MUSIC_DB_LOCATION, YOUTUBE_PLAYLIST_CHANNEL
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +46,8 @@ def parse_args(args: List[str]) -> argparse.Namespace:
 def check_download_queue() -> None:
     global download_queue
     import sqlite3 as sql
-    from src.crunkybot.twitch import MusicDB
-    from src.crunkybot.twitch import ConfigLoader, MUSIC_DB_LOCATION
+    from src.crunkybot.twitch.musicutils import MusicDB
+    from src.crunkybot.twitch.config import ConfigLoader, MUSIC_DB_LOCATION
     from src.crunkybot.twitch.dbutils import Playlist
     import src.crunkybot.twitch.utils as utils
 
@@ -100,6 +98,8 @@ def check_download_queue() -> None:
 
 def sync_request(username: str = "cockeyedgaming") -> None:
     global download_queue
+    import crunkybot.twitch.utils as utils
+    from crunkybot.twitch.musicutils import MusicDB, sync_playlists_to_db
 
     if not utils.is_op(username):
         return
@@ -142,6 +142,8 @@ def sync_request(username: str = "cockeyedgaming") -> None:
 def main(args: argparse.Namespace):
     # Loading the config before any other modules are loaded.
     config: Dict = ConfigLoader(args.config_file).load()
+    from crunkybot.twitch.plugins.plugin import PluginLoader, PluginRequest, Plugin
+
     print(f"Config: {config}")
 
     playlist_proc = None
