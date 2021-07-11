@@ -1,8 +1,10 @@
 import json
-from typing import List, Dict, Callable, Optional
+from typing import List, Dict, Callable, Optional, Any
 from dataclasses import dataclass
 from crunkybot.twitch.icescontroller import PlaylistProcess
 from crunkybot.twitch.twitch_utils import TwitchSocket, uptime
+import crunkybot.twitch.utils as utils
+
 
 @dataclass
 class PluginRequest:
@@ -13,43 +15,45 @@ class PluginRequest:
     process: Optional[PlaylistProcess] = None
     params: Optional[Dict] = None
 
+
 @dataclass
 class Plugin:
     plugin_name: str
-    fn: Callable[[PluginRequest], None]
+    fn: Callable[[PluginRequest], Any]
+
 
 plugins = {
-    "insult": [
-        Plugin(
-            "CockeyedInsults",
-            lambda req: insult(req.socket, req.username, req.message, insults)
-        )
-    ],
+    # "insult": [
+    #     Plugin(
+    #         "CockeyedInsults",
+    #         lambda req: insult(req.socket, req.username, req.message, insults)
+    #     )
+    # ],
     # Raffle commands
-    "raffle": [
-        Plugin(
-            "Raffle",
-            lambda req: raffle(req.socket, req.username)
-        )
-    ],
-    "rafflestop": [
-        Plugin(
-            "Raffle",
-            lambda req: raffle_stop(req.socket, req.username)
-        )
-    ],
-    "raffledraw": [
-        Plugin(
-            "Raffle",
-            lambda req: raffle_draw(req.socket, req.username)
-        )
-    ],
-    "rafflestart": [
-        Plugin(
-            "Raffle",
-            lambda req : raffle_start(req.socket, req.username, req.message)
-        )
-    ],
+    # "raffle": [
+    #     Plugin(
+    #         "Raffle",
+    #         lambda req: raffle(req.socket, req.username)
+    #     )
+    # ],
+    # "rafflestop": [
+    #     Plugin(
+    #         "Raffle",
+    #         lambda req: raffle_stop(req.socket, req.username)
+    #     )
+    # ],
+    # "raffledraw": [
+    #     Plugin(
+    #         "Raffle",
+    #         lambda req: raffle_draw(req.socket, req.username)
+    #     )
+    # ],
+    # "rafflestart": [
+    #     Plugin(
+    #         "Raffle",
+    #         lambda req : raffle_start(req.socket, req.username, req.message)
+    #     )
+    # ],
     # Queue commands
     #"!queue"    : lambda s,u,**kw : utils.add_to_queue(s,u),
     #"!popqueue" : lambda s,u,m,**kw : utils.pop_queue(s,u,m),
@@ -58,7 +62,7 @@ plugins = {
     "sr": [
         Plugin(
             "SongRequest",
-            lambda req: song_request(req.socket, req.username, req.message)
+            lambda req: utils.song_request(req.socket, req.username, req.message, req.params['download_queue'])
         )
     ],
     "currentsong": [
@@ -73,7 +77,7 @@ plugins = {
             lambda req: utils.skip_song(req.socket, req.username, req.process)
         )
     ],
-    "cp" : [
+    "cp": [
         Plugin(
             "SongPlugin",
             lambda req: utils.change_playlist(
@@ -94,16 +98,17 @@ plugins = {
         )
     ],
     # Stream commands
-    "uptime" : [
+    "uptime": [
         Plugin(
             "StreamUtils",
             lambda req: uptime(req.socket, req.config)
         )
     ],
     # ANY commands. Run on any message, regardless of command.
-    "ANY" : [
+    "ANY": [
     ]
 }
+
 
 class PluginLoader:
     def __init__(self, plugin_file: Optional[str] = None):
@@ -112,7 +117,8 @@ class PluginLoader:
         else:
             with open(plugin_file) as f:
                 self._enabled_plugins = set(json.load(f))
-    def load(self):
+
+    def load(self) -> Dict[str, List[Plugin]]:
         loaded_plugins = {}
         if self._enabled_plugins is None:
             loaded_plugins = plugins

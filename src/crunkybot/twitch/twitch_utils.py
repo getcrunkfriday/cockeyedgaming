@@ -1,16 +1,20 @@
 import socket
 import re
 import requests
+import datetime
 import json
 import time
 from typing import Tuple, Optional, Dict
-from crunkybot.twitch.config3 import TWITCH_HOST, TWITCH_PORT, TWITCH_NICK, \
-    TWITCH_CHAN, TWITCH_PASS, TWITCH_SUB_PASS
+from crunkybot.twitch.config import TWITCH_HOST, TWITCH_PORT, TWITCH_NICK, \
+    TWITCH_CHAN, TWITCH_PASS
 
 PING_MSG = "PING :tmi.twitch.tv\r\n"
 CHAT_MSG=re.compile(r"^:\w+!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :")
 COMMAND_SYMBOLS = ["!"]
 TWITCH_V2_STREAMS_URL = "https://api.twitch.tv/helix/streams"
+TWITCH_V2_MODERATION_URL = "https://api.twitch.tv/helix/moderation"
+TWITCH_V2_USERS_URL = "https://api.twitch.tv/helix/users"
+TWITCH_V2_SUB_URL = "https://api.twitch.tv/helix/subscriptions"
 TWITCH_OAUTH_URL = "https://id.twitch.tv/oauth2/token"
 
 CLIENT_SCOPES = [
@@ -24,6 +28,7 @@ CLIENT_SCOPES = [
     'moderation:read',
     'user:read:broadcast'
 ]
+
 
 class TwitchSocket:
     def __init__(
@@ -103,8 +108,10 @@ def connect(config: Dict) -> TwitchSocket:
     twitch_socket.connect()
     return twitch_socket
 
+
 def get_username(twitch_msg: str) -> str:
     return re.search(r"\w+", twitch_msg).group(0)
+
 
 def get_message(twitch_msg: str) -> Tuple[Optional[str], str]:
     message = CHAT_MSG.sub("", twitch_msg).strip()
@@ -115,12 +122,14 @@ def get_message(twitch_msg: str) -> Tuple[Optional[str], str]:
         command = command[1:]
     return command, message
 
+
 def get_twitch_headers(twitch_socket: TwitchSocket) -> Dict:
     token = twitch_socket.get_token()
     return {
         "Client-ID": token['client_id'],
         "Authorization": f"Bearer {token['token']}"
     }
+
 
 def send_message(
     twitch_socket: TwitchSocket,
@@ -135,10 +144,10 @@ def send_message(
     else:
         print(msg)
 
+
 # Utilities for getting information from Twitch API
 def uptime(twitch_socket: TwitchSocket, config: Dict):
     try:
-        twitch_url = TWITCH_V2_STREAMS_URL
         request = requests.get(
             TWITCH_V2_STREAMS_URL,
             headers=get_twitch_headers(twitch_socket),
@@ -146,8 +155,8 @@ def uptime(twitch_socket: TwitchSocket, config: Dict):
                 "user_login": config[TWITCH_CHAN]
             }
         )
-        json_dict = json.loads(request.text)["data"]
-        if len("data") > 0 in json_dict and json_dict['data'][0]['type'] == 'live':
+        json_dict = json.loads(request.text)
+        if len(json_dict) > 0 and 'data' in json_dict and json_dict['data'][0]['type'] == 'live':
             timestamp = json_dict['data'][0]['started_at']
             dt_timestamp = datetime.datetime.strptime(
                 timestamp, '%Y-%m-%dT%H:%M:%SZ'
