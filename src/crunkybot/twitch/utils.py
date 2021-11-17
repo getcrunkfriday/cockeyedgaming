@@ -225,7 +225,7 @@ def download_song_requests(vids: List[str]) -> None:
 def change_playlist(
     sock: TwitchSocket,
     user: str,
-    message: str,
+    message: str
 ) -> None:
     if is_op(user):
         message = message.strip()
@@ -251,7 +251,7 @@ def change_playlist(
             music_db.add_playlists_request(playlists)
         else:
             if playlist_name:
-                playlist=music_db.get_playlist_by_name(playlist_name)
+                playlist = music_db.get_playlist_by_name(playlist_name)
             music_db.add_playlist_request(playlist)
             chat(sock, "crunkybot", f"Playlist changed to: {playlist.playlist_name}.")
 
@@ -340,6 +340,7 @@ def fill_user_list(
     result_key: str
 ) -> Set:
     result = set([])
+    print("I'm here...")
     with requests.Session() as sess:
         request = sess.get(
             endpoint,
@@ -361,6 +362,7 @@ def fill_user_list(
 
 
 def fill_user_lists(socket: TwitchSocket):
+    print("Im here...")
     MODERATORS.update(fill_user_list(
         socket,
         "/".join([TWITCH_V2_MODERATION_URL, "moderators"]),
@@ -379,6 +381,8 @@ def fill_user_lists(socket: TwitchSocket):
         {"broadcaster_id": ConfigLoader.CONFIG[TWITCH_CHAN_ID]},
         "user_login"
     ))
+    logger.info(f"Moderators: {MODERATORS}.")
+    logger.info(f"Subscribers: {SUBSCRIBERS}.")
 
 
 def is_op(user: str) -> bool:

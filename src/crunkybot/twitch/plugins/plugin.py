@@ -81,7 +81,7 @@ plugins = {
         Plugin(
             "SongPlugin",
             lambda req: utils.change_playlist(
-                req.socket, req.username, req.message, req.process
+                req.socket, req.username, req.message
             )
         )
     ],

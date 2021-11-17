@@ -156,7 +156,7 @@ def uptime(twitch_socket: TwitchSocket, config: Dict):
             }
         )
         json_dict = json.loads(request.text)
-        if len(json_dict) > 0 and 'data' in json_dict and json_dict['data'][0]['type'] == 'live':
+        if json_dict and 'data' in json_dict and json_dict['data'] and json_dict['data'][0]['type'] == 'live':
             timestamp = json_dict['data'][0]['started_at']
             dt_timestamp = datetime.datetime.strptime(
                 timestamp, '%Y-%m-%dT%H:%M:%SZ'
@@ -184,7 +184,8 @@ def uptime(twitch_socket: TwitchSocket, config: Dict):
                 twitch_socket,
                 config[TWITCH_CHAN],
                 "crunkybot",
-                "The stream isn't live :(."
+                "The stream isn't live :("
             )
     except Exception as e:
         print(f"Error in {e}")
+        raise e

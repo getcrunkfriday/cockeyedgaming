@@ -1,7 +1,11 @@
+import asyncio
 import logging
 import sys
 import os
 import argparse
+import traceback
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from crunkybot.twitch.config import ConfigLoader, MUSIC_DB_LOCATION, YOUTUBE_PLAYLIST_CHANNEL
 
 from typing import List, Dict
@@ -9,7 +13,6 @@ import threading as thread
 from crunkybot.twitch import icescontroller
 import crunkybot.twitch.twitch_utils as twitch_utils
 import threading
-
 
 logger = logging.getLogger(__name__)
 
@@ -143,19 +146,24 @@ def main(args: argparse.Namespace):
     # Loading the config before any other modules are loaded.
     config: Dict = ConfigLoader(args.config_file).load()
     from crunkybot.twitch.plugins.plugin import PluginLoader, PluginRequest, Plugin
+    from crunkybot.twitch.utils import fill_user_lists
 
     print(f"Config: {config}")
 
     playlist_proc = None
     if args.sr_enabled:
         thread.Thread(target=check_download_queue, args=())
-        playlistProc = icescontroller.PlaylistProcess()
+        playlist_proc = icescontroller.PlaylistProcess()
     if args.sync_yt:
         sync_request()
 
     plugins: Dict[str, List[Plugin]] = PluginLoader(args.plugin_file).load()
     twitch_sock: twitch_utils.TwitchSocket = twitch_utils.connect(config)
     logger.info(f"Loaded plugins: {plugins}")
+
+    # Add background jobs here.
+    # Jobs:
+    # - Fill moderator/follower/subscriber lists.
     while True:
         try:
             response = twitch_sock.receive()
@@ -179,11 +187,13 @@ def main(args: argparse.Namespace):
                                 response = plugin.fn(request)
 
         except Exception as e:
-            exc_type,exc_obj,exc_tb = sys.exc_info()
+            exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logger.error(f"{e} at {fname}:{exc_tb.tb_lineno}")
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
     parsed_args = parse_args(sys.argv[1:])
+    main(parsed_args)
     main(parsed_args)
