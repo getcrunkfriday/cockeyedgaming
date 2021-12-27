@@ -4,6 +4,7 @@ import requests
 import datetime
 import json
 import time
+
 from typing import Tuple, Optional, Dict
 from crunkybot.twitch.config import TWITCH_HOST, TWITCH_PORT, TWITCH_NICK, \
     TWITCH_CHAN, TWITCH_PASS

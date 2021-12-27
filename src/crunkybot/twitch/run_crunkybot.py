@@ -1,11 +1,9 @@
-import asyncio
 import logging
 import sys
 import os
 import argparse
 import traceback
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from crunkybot.twitch.config import ConfigLoader, MUSIC_DB_LOCATION, YOUTUBE_PLAYLIST_CHANNEL
 
 from typing import List, Dict
@@ -114,13 +112,13 @@ def sync_request(username: str = "cockeyedgaming") -> None:
         db, ConfigLoader.CONFIG[YOUTUBE_PLAYLIST_CHANNEL]
     )
     # Add playlists.
-    # for p2a in playlists_to_add:
-    #     download_queue.append({
-    #         'thread': None,
-    #         'request_type': 'sync_add_playlist',
-    #         'playlist_id': p2a[0],
-    #         'playlist_name': p2a[1]
-    #     })
+    for p2a in playlists_to_add:
+        download_queue.append({
+            'thread': None,
+            'request_type': 'sync_add_playlist',
+            'playlist_id': p2a[0],
+            'playlist_name': p2a[1]
+        })
     # Submit downloads for tracks.
     if len(tracks_to_add) > 0:
         download_thread=threading.Thread(
@@ -144,6 +142,7 @@ def sync_request(username: str = "cockeyedgaming") -> None:
 
 def main(args: argparse.Namespace):
     # Loading the config before any other modules are loaded.
+    # TODO: There's probably a more elegant way to do this.
     config: Dict = ConfigLoader(args.config_file).load()
     from crunkybot.twitch.plugins.plugin import PluginLoader, PluginRequest, Plugin
     from crunkybot.twitch.utils import fill_user_lists
@@ -195,5 +194,4 @@ def main(args: argparse.Namespace):
 
 if __name__ == "__main__":
     parsed_args = parse_args(sys.argv[1:])
-    main(parsed_args)
     main(parsed_args)
