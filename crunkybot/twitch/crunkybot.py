@@ -7,6 +7,7 @@ import time, thread
 import sys
 import icescontroller
 from time import sleep
+from dbutils import Playlist
 import time
 import sys,os
 
@@ -67,7 +68,7 @@ def add_legendary(s,u,m):
         utils.chat(s,u,m+" added to legendaries!")
 
 def get_legendaries(s,u,m):
-    utils.chat(s,u,"Crunk has discovered "+`len(legendaries)`+" legendaries! ("+",".join(legendaries)+")")
+    utils.chat(s,u,"Crunk has discovered"+`len(legendaries)`+"legendaries! ("+",".join(legendaries)+")")
 
 def toggle_sr(s,u,m):
     global sr_enabled
@@ -81,31 +82,31 @@ def add_deaths(s,u,m):
     global deaths
     if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "firezerg_":
         deaths += 1
-        utils.chat(s,u,"Ash has spilled her drink "+`deaths`+" times. What a clumsy bitch.")
+        utils.chat(s,u,"Ash has spilled her drink {deaths} times. What a clumsy bitch.")
 
 def remove_death(s,u,m):
     global deaths
     if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "firezerg_":
         deaths -= 1 if deaths > 0 else 0
-        utils.chat(s,u,"JK JK , she saved it. Only "+`deaths`+" spills!")
+        utils.chat(s,u,"JK JK , she saved it. Only {deaths} spills!")
 
 def get_deaths(s,u,m):
-    utils.chat(s,u,"Ash has spilled her drink "+`deaths`+" times...")
+    utils.chat(s,u,"Ash has spilled her drink {deaths} times...")
 
 def scream(s,u,m):
     global num_screams
     if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "getcrunkfriday":
         num_screams += 1
-        utils.chat(s,u,"Ash just screamed like a little bitch. That's "+`num_screams`+" times now...")
+        utils.chat(s,u,"Ash just screamed like a little bitch. That's {num_screams} times now...")
 
 def noscream(s,u,m):
     global num_screams
     if utils.isOp(u) or u.lower() == "cockeyedgaming" or u.lower() == "getcrunkfriday":
         num_screams -= 1
-        utils.chat(s,u,"Nvm... that was just me. Ash has only screamed "+`num_screams`+" times now...")
+        utils.chat(s,u,"Nvm... that was just me. Ash has only screamed {num_screams} times now...")
 
 def screams(s,u,m):
-    utils.chat(s,u,"Ash has screamed "+`num_screams`+" times now... what a bitch. LUL")
+    utils.chat(s,u,"Ash has screamed {num_screams} times now... what a bitch. LUL")
 
 def song_request(sock,username,message):
     global download_queue
@@ -135,15 +136,18 @@ def sync_request(username="cockeyedgaming"):
     db=MusicDB(db_location)
     playlists_to_add, tracks_to_add, tracks_to_remove = musicutils.sync_playlists_to_db(db, cfg.YOUTUBE_PLAYLIST_CHANNEL)
     # Add playlists.
-    # for p2a in playlists_to_add:
-    #     download_queue.append({
-    #         'thread': None,
-    #         'request_type': 'sync_add_playlist',
-    #         'playlist_id': p2a[0],
-    #         'playlist_name': p2a[1]
-    #     })
+    for p2a in playlists_to_add:
+        print("Adding playlist {p2a[0]}, {p2a[1]}")
+        download_queue.append({
+            'thread': None,
+            'request_type': 'sync_add_playlist',
+            'playlist_id': p2a[0],
+            'playlist_name': p2a[1]
+        })
     # Submit downloads for tracks.
+    print("Adding tracks to playlist.")
     if len(tracks_to_add) > 0:
+        print("Adding track to playlist2.")
         download_thread=threading.Thread(target=utils.download_song_requests,args=[["https://www.youtube.com/watch?v="+t2a.youtube_id_ for t2a in tracks_to_add]])
         download_thread.start()
         download_queue.append({
@@ -176,12 +180,10 @@ def check_download_queue():
                 if download['request_type'] == 'sr':
                     t=download['thread']
                     if not t.isAlive():
-                        print "Download=",download
                         current_request_user=download['user']
                         current_request_vid =download['vid']
                         current_request_vidid=download['vidid']
                         current_request_title=download['title']
-                        print "Adding to download queue..."
                         utils.commit_song_request(conn,current_request_user,current_request_vid,current_request_vidid,current_request_title)
                         complete_threads.append(d)
                 if download['request_type'] == 'sync_add_playlist':
@@ -198,13 +200,14 @@ def check_download_queue():
                     for t2r in download['tracks']:
                         playlist = db.get_playlist_by_id(t2r.playlist_id_)
                         db.remove_track_from_playlist(playlist.rid_, t2r)
-                        os.remove(t2r.file_location_)
+                        if os.path.exists(t2r.file_location_):
+                            os.remove(t2r.file_location_)
                     complete_threads.append(d)
             for t in complete_threads:
                 try:
                     del download_queue[t]
                 except Exception as e:
-                    print "Unexpected error:", e
+                    print("Unexpected error: {}".format(e))
                     continue
 
 
@@ -227,13 +230,12 @@ def main(debug, sync_yt):
         sync_request()
     # Loads "!" commands.
     commands= utils.command_db.load_commands()
-    print commands
+    print(commands)
     # Loads auto-shoutouts.
     shoutouts=utils.command_db.load_shoutouts()
-    print commands
+    print(commands)
     while True:
         try:
-            print download_queue
             response = ""
             if debug:
                 response = raw_input(">>>")
@@ -242,9 +244,11 @@ def main(debug, sync_yt):
             if not debug and response == "PING :tmi.twitch.tv\r\n":
                 s.send("PONG :tmi.twitch.tv\r\n".encode("utf-8"))
             else:
-                username = re.search(r"\w+", response).group(0) # Grab first word in message; will be user.
+                username = re.search(r"\w+", response) # Grab first word in message; will be user.
+                if username is None:
+                    continue
+                username = username.group(0)
                 message  = CHAT_MSG.sub("", response).strip()
-                print username,message
                 command = message.split()[0]
                 message = " ".join(message.split()[1:])
                 if command[0] == "!":
@@ -255,13 +259,13 @@ def main(debug, sync_yt):
                     # If the command is DB-defined:
                     elif command in commands:
                         message=message.replace("'",r"\'")
-                        print commands[command].get_fields()
+                        print(commands[command].get_fields())
                         cmd_obj=utils.execute_command(s,username,message,commands[command])
                         # If we're adding a new command or shoutout.
                         if cmd_obj and "command" in cmd_obj:
                             # Add to commands.
                             if cmd_obj["command"][0] == "ADD":
-                                print cmd_obj
+                                print(cmd_obj)
                                 commands[cmd_obj['command'][1]['command']]=cmd_obj["command"][1]
                             elif cmd_obj["command"][0] == "REMOVE":
                                 del commands[cmd_obj['command'][1]['command']]
@@ -276,10 +280,10 @@ def main(debug, sync_yt):
                     if not so['was_seen']:
                         utils.chat(s,username," : ".join([so['chat_text'],so['twitch_clip']]))
                         so['was_seen']=True
-        except Exception,e:
+        except Exception as e:
             exc_type,exc_obj,exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print e,exc_type,fname,exc_tb.tb_lineno
+            print("{},{},{},{}".format(e, exc_type, fname, exc_tb.tb_lineno))
                                             
 if __name__ == "__main__":
     debug=False
