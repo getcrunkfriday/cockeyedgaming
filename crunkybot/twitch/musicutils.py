@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 from oauth2client.tools import argparser
-import youtube_dl
+import yt_dlp as youtube_dl
 import json
 import sqlite3 as sql
 import time
@@ -22,8 +22,8 @@ youtube_re_str="http(s)?://www\.youtube\.com/watch\?v=([-A-Za-z0-9_])+"
 youtube_re=re.compile(youtube_re_str)
 dl_location=cfg.MUSIC_DOWNLOAD_DIR
 pl_location=cfg.MUSIC_PLAYLIST
-# db_location=cfg.MUSIC_DB
-db_location = "/tmp/dbs/test_db.db"
+db_location=cfg.MUSIC_DB
+# db_location = "/tmp/dbs/test_db.db"
 playlist_tag = "[CrunkyBot]"
 
 info_options={'outtmpl': '%(id)s %(title)s', 'ignoreerrors':True}
@@ -156,8 +156,9 @@ def sync_playlists_to_db(db, channel_id, playlists=[]):
                 if playlist_track.youtube_id_ not in [ytt[0] for ytt in yt_tracks]:
                     # db.remove_track_from_playlist(db_playlist.rid_, playlist_track)
                     # os.remove(playlist_track.file_location_)
-                    tracks_to_remove.append(track)
-                    print "Track",playlist_track.youtube_id_,"removed from DB (and file system)."
+                    # tracks_to_remove.append(track)
+                    # print "Track",playlist_track.youtube_id_,"removed from DB (and file system)."
+                    pass
         else:
             print "Playlist", playlist[1], "not found. Downloading..."
             playlists_to_add.append(playlist)
