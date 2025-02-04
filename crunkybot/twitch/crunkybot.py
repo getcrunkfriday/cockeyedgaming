@@ -3,7 +3,7 @@ import utils
 import musicutils
 import socket
 import re
-import time, thread
+import time, _thread
 import sys
 import icescontroller
 from time import sleep
@@ -68,7 +68,7 @@ def add_legendary(s,u,m):
         utils.chat(s,u,m+" added to legendaries!")
 
 def get_legendaries(s,u,m):
-    utils.chat(s,u,"Crunk has discovered"+`len(legendaries)`+"legendaries! ("+",".join(legendaries)+")")
+    utils.chat(s,u,"Crunk has discovered"+repr(len(legendaries))+"legendaries! ("+",".join(legendaries)+")")
 
 def toggle_sr(s,u,m):
     global sr_enabled
@@ -207,7 +207,7 @@ def check_download_queue():
                 try:
                     del download_queue[t]
                 except Exception as e:
-                    print("Unexpected error: {}".format(e))
+                    print(("Unexpected error: {}".format(e)))
                     continue
 
 
@@ -220,11 +220,11 @@ def main(debug, sync_yt):
     s.send("JOIN #{}\r\n".format(cfg.TWITCH_CHAN).encode("utf-8"))
     CHAT_MSG=re.compile(r"^:\w+!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :")
     # to send a chat: utils.chat(s, "Chat message")
-    thread.start_new_thread(utils.threadFillOpList,())
-    thread.start_new_thread(utils.threadFillFollowerList,())
+    _thread.start_new_thread(utils.threadFillOpList,())
+    _thread.start_new_thread(utils.threadFillFollowerList,())
     playlistProc=None
     if sr_enabled:
-        thread.start_new_thread(check_download_queue,())
+        _thread.start_new_thread(check_download_queue,())
         playlistProc=icescontroller.PlaylistProcess()
     if sync_yt:
         sync_request()
@@ -238,7 +238,7 @@ def main(debug, sync_yt):
         try:
             response = ""
             if debug:
-                response = raw_input(">>>")
+                response = input(">>>")
             else:
                 response = s.recv(1024).decode("utf-8")
             if not debug and response == "PING :tmi.twitch.tv\r\n":
@@ -259,7 +259,7 @@ def main(debug, sync_yt):
                     # If the command is DB-defined:
                     elif command in commands:
                         message=message.replace("'",r"\'")
-                        print(commands[command].get_fields())
+                        print((commands[command].get_fields()))
                         cmd_obj=utils.execute_command(s,username,message,commands[command])
                         # If we're adding a new command or shoutout.
                         if cmd_obj and "command" in cmd_obj:
@@ -283,7 +283,7 @@ def main(debug, sync_yt):
         except Exception as e:
             exc_type,exc_obj,exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print("{},{},{},{}".format(e, exc_type, fname, exc_tb.tb_lineno))
+            print(("{},{},{},{}".format(e, exc_type, fname, exc_tb.tb_lineno)))
                                             
 if __name__ == "__main__":
     debug=False

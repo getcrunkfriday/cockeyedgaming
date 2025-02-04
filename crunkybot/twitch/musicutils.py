@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+
 # from sound_downloader.downloader import YoutubeAudioDownloader
 
 from apiclient.discovery import build
@@ -48,8 +48,8 @@ dl_playlist_options = {
         'preferredcodec': 'mp3'
     }]
 }
-print "vid", dl_vid_options
-print "vid", dl_playlist_options
+print("vid", dl_vid_options)
+print("vid", dl_playlist_options)
 
 def get_vid_info(vid):
     with youtube_dl.YoutubeDL(info_options) as ydl:
@@ -107,11 +107,11 @@ def get_playlists_for_channel_id(channel_id):
     while (req):
         res = req.execute()
         for i in res['items']:
-            print i['snippet'].keys()
+            print(list(i['snippet'].keys()))
             title = i['snippet']['title']
             if playlist_tag in title:
                 playlists.append((i['id'], title))
-            print('title=',title,'id=',i['id'])
+            print(('title=',title,'id=',i['id']))
         req= playlist_response.list_next(req, res)
     return playlists
 
@@ -141,7 +141,7 @@ def sync_playlists_to_db(db, channel_id, playlists=[]):
         yt_tracks = get_songs_for_playlist(playlist[0])
         db_playlist = db.get_playlist_by_youtube_id(playlist[0])
         if db_playlist:
-            print "Playlist", playlist[1], "found. Syncing from YouTube..."
+            print("Playlist", playlist[1], "found. Syncing from YouTube...")
             playlist_tracks = db.get_tracks(db_playlist.rid_)
             playlist_songs = [t.youtube_id_ for t in playlist_tracks]
             for ytt in yt_tracks:
@@ -150,7 +150,7 @@ def sync_playlists_to_db(db, channel_id, playlists=[]):
                     # download_vid("https://www.youtube.com/watch?v="+ytt[0])
                     track=Track(db_playlist.rid_,ytt[0],ytt[1],dl_location+"/"+ytt[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
                     # res,track_rid=db.add_track_to_playlist(track)
-                    print "Track",track.rid_,track.title_,"added to DB (",track.file_location_,")"
+                    print("Track",track.rid_,track.title_,"added to DB (",track.file_location_,")")
                     tracks_to_add.append(track)
             for playlist_track in playlist_tracks:
                 if playlist_track.youtube_id_ not in [ytt[0] for ytt in yt_tracks]:
@@ -160,7 +160,7 @@ def sync_playlists_to_db(db, channel_id, playlists=[]):
                     # print "Track",playlist_track.youtube_id_,"removed from DB (and file system)."
                     pass
         else:
-            print "Playlist", playlist[1], "not found. Downloading..."
+            print("Playlist", playlist[1], "not found. Downloading...")
             playlists_to_add.append(playlist)
             # download_playlist("https://www.youtube.com/watch?v="+yt_tracks[0][0]+"&list="+playlist[0])
             playlist=Playlist(playlist[1],"cockeyedgaming",youtube_id=playlist[0])
@@ -170,13 +170,13 @@ def sync_playlists_to_db(db, channel_id, playlists=[]):
                 for ytt in yt_tracks:
                     track=Track(rid,ytt[0],ytt[1],dl_location+"/"+ytt[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
                     tracks_to_add.append(track)
-                    print "Track",track.rid_,track.title_,"added to DB (",track.file_location_,")"
+                    print("Track",track.rid_,track.title_,"added to DB (",track.file_location_,")")
     return (playlists_to_add, tracks_to_add, tracks_to_remove)
             
 
 def youtube_search(search_str):
     def youtube_search(vid):
-        print vid
+        print(vid)
         youtube = build(cfg.YOUTUBE_API_SERVICE_NAME, cfg.YOUTUBE_API_VERSION,
                     developerKey=cfg.DEVELOPER_KEY)
 
@@ -194,24 +194,24 @@ def youtube_search(search_str):
         res=youtube_search(search_str)
         first_return=""
         if res:
-            print res['items']
+            print(res['items'])
             if res['items']:
                 first_return=res['items'][0]['id']['videoId']
         return first_return
     except HttpError as e:
-        print "Error",e.resp.status,e.content
+        print("Error",e.resp.status,e.content)
         return None
 
 if __name__ == "__main__":
     import sys
     db=MusicDB(db_location)
     if len(sys.argv) >= 2:
-        print sys.argv
+        print(sys.argv)
         if sys.argv[1] == "test":
             playlists = get_playlists_for_channel_id("UCAUBes2LJsXAYRSmq7zwF8g")
             # playlists.append(("PLmPSvm77oH5uXayUShAa2CXy99GiGzSPS", "Test Playlist 1"))
             for playlist in playlists:
-                print(playlist[1])
+                print((playlist[1]))
                 # print(get_songs_for_playlist(playlist[0]))
             sync_playlists_to_db(db, "UCAUBes2LJsXAYRSmq7zwF8g", [playlists[0]])
         if sys.argv[1] == "addplaylist":
@@ -224,14 +224,14 @@ if __name__ == "__main__":
             res,rid=db.add_playlist(playlist)
             if res:
                 playlist.set_id(rid)
-                print playlist_url,str(playlist_url)
+                print(playlist_url,str(playlist_url))
                 songs=get_playlist_info(str(playlist_url))
                 for song in songs:
                     # Creates a DB Track for each song in a playlist.
-                    print "Adding to playlist...",rid
+                    print("Adding to playlist...",rid)
                     track=Track(rid,song[0],song[1],dl_location+"/"+song[0]+".mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
                     res,track_rid=db.add_track_to_playlist(track)
-                    print "Track",track_rid,track.title_,"added to DB (",track.file_location_,")"
+                    print("Track",track_rid,track.title_,"added to DB (",track.file_location_,")")
                 download_playlist(playlist_url)
         elif sys.argv[1] == "removeplaylist":
             # arg 1: removeplaylist
@@ -240,18 +240,18 @@ if __name__ == "__main__":
         elif sys.argv[1] == "list":
             playlists=db.get_playlists()
             for p in playlists:
-                print p.rid_,":",p.playlist_name_
+                print(p.rid_,":",p.playlist_name_)
         elif sys.argv[1] == "listvideos":
             playlist_id = sys.argv[2]
             videos = get_songs_for_playlist(playlist_id)
             for video in videos:
-                print video
-            print len(videos)
+                print(video)
+            print(len(videos))
         elif sys.argv[1] == "addcustomsong":
             playlist=Playlist("Metal","cockeyedgaming")
             res,rid=db.add_playlist(playlist)
             track=Track(rid,"None","Ash Plissken - I'm a Dwarf",dl_location+"/Ash_Plissken_-_Im_a_Dwarf.mp3","cockeyedgaming",time.strftime("%Y-%m-%d"))
             res,track_rid=db.add_track_to_playlist(track)
-            print "Track",track_rid,track.title_,"added to DB(",track.file_location_,")"
+            print("Track",track_rid,track.title_,"added to DB(",track.file_location_,")")
         elif sys.argv[1] == "ppr":
             db.purge_playlist_requests()

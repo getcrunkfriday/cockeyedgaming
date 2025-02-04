@@ -1,8 +1,8 @@
 # utils.py
 
 import crunkycfg as cfg
-import urllib2, json
-import time, thread
+import urllib.request, urllib.error, urllib.parse, json
+import time, _thread
 import random
 import re
 import os
@@ -61,20 +61,20 @@ def execute_command(sock,username,message,command):
     if ((command["permission"]=="MODERATOR" and isOp(username)) or
         (command["permission"]=="OWNER" and username.lower() == cfg.TWITCH_CHAN) or
         (command["permission"]=="ALL")):
-        print username.lower()+","+cfg.TWITCH_CHAN
-        print "Trying to evaluate..."
+        print(username.lower()+","+cfg.TWITCH_CHAN)
+        print("Trying to evaluate...")
         ret=eval(action_str)
     else:
-        print username.lower()+","+cfg.TWITCH_CHAN
-        print username.lower() == cfg.TWITCH_CHAN
-        print username,"does not have permission to execute",command["action"]
+        print(username.lower()+","+cfg.TWITCH_CHAN)
+        print(username.lower() == cfg.TWITCH_CHAN)
+        print(username,"does not have permission to execute",command["action"])
     return ret
 
 def remove_chatcomm(sock,command):
     if command[0] == "!":
         command=command[1:]
     command_obj=command_db.get_command(command)
-    print command_obj
+    print(command_obj)
     if command_obj:
         command_db.remove_command(command_obj)
         chat(sock,"crunkybot",command+" successfully removed!")
@@ -124,7 +124,7 @@ def add_command(sock,username,command_name,action_function):
     return False
 
 def process_song_request(sock,user,message):
-    print "Processing..."
+    print("Processing...")
     if not message:
         chat(sock,"crunkybot", "Gotta use a YouTube search or link "+user+", you n00b!")
         return False
@@ -143,8 +143,8 @@ def process_song_request(sock,user,message):
             else:
                 chat(sock,"crunkybot","Video must be < 7 minutes long.")
                 return False
-        except Exception,e:
-            print "Exception",e
+        except Exception as e:
+            print("Exception",e)
     else:
         res=musicutils.youtube_search(message)
         try:
@@ -156,15 +156,15 @@ def process_song_request(sock,user,message):
             else:
                 chat(sock,"crunkybot","Video must be < 7 minutes long.")
                 return False
-        except Exception,e:
-            print "Exception",e
+        except Exception as e:
+            print("Exception",e)
     return False
                 
 def download_song_request(vid):
     try:
         musicutils.download_vid(vid)
-    except Exception,e:
-        print "Soft failure.",e
+    except Exception as e:
+        print("Soft failure.",e)
 def download_song_requests(vids):
     for vid in vids:
         download_song_request(vid)
@@ -187,7 +187,7 @@ def change_playlist(s,user,message,proc):
                 if playlist:
                     playlists.append(playlist)
                 else:
-                    chat(sock,"crunkybot","No playlist with id"+`playlist_id`)
+                    chat(sock,"crunkybot","No playlist with id"+repr(playlist_id))
                     return None
             chat(s,"crunkybot","Playlist changed to mix of "+",".join([x.playlist_name_ for x in playlists]))
             music_db.add_playlists_request(playlists)
@@ -199,7 +199,7 @@ def change_playlist(s,user,message,proc):
 
 # Download youtube song and add to request list.
 def commit_song_request(conn, user, vid, vidid, title):
-    print "COMMITTING...",vid,user
+    print("COMMITTING...",vid,user)
     vid=vid.split(" ")[0]
     if "&" in vid:
         vid=vid.split("&")[0]
@@ -208,11 +208,11 @@ def commit_song_request(conn, user, vid, vidid, title):
         c=conn.cursor()
         try:
             c.execute("INSERT INTO requests(youtube_id,title,file_location,user_added,date_added) VALUES(?,?,?,?,?)",(vid,title,cfg.MUSIC_DOWNLOAD_DIR+"/"+vidid+".mp3",user,time.strftime("%Y-%m-%d")))
-            print 'executing'
+            print('executing')
             conn.commit()
-            print 'committed'
-        except Exception,e:
-            print "Soft failure.",e
+            print('committed')
+        except Exception as e:
+            print("Soft failure.",e)
 
 def current_song_chat(sock,user):
     cs=current_song(sock,user)
@@ -232,7 +232,7 @@ def current_song(sock, user):
 def skip_song(sock,user,proc):
     if isOp(user) or user.lower() == cfg.TWITCH_CHAN:
         currsong=current_song(sock,user)
-        print currsong
+        print(currsong)
         if currsong:
             proc.skip()
             chat(sock,user,currsong+" skipped...")
@@ -244,7 +244,7 @@ def list_playlists(sock,user):
         playlists=music_db.get_playlists()
         playlists=playlists[:(min(len(playlists),10))]
         playlist_names = [filter_name(p.playlist_name_) for p in playlists]
-        chat_str="Playlists: "+",".join([`playlists[p].rid_`+": "+playlist_names[p][:(min(len(playlist_names[p]),8))] for p in range(len(playlist_names))])
+        chat_str="Playlists: "+",".join([repr(playlists[p].rid_)+": "+playlist_names[p][:(min(len(playlist_names[p]),8))] for p in range(len(playlist_names))])
         chat(sock,user,chat_str)
     
 # Function: load_insults
@@ -280,7 +280,7 @@ def chat(sock, user, msg, debug=False):
     if not debug:
         sock.send("PRIVMSG #{} :{}\r\n".format(cfg.TWITCH_CHAN, msg.encode('utf-8')))
     else:
-        print msg
+        print(msg)
 
 # Function: ban
 # Ban a user from the channel
@@ -305,8 +305,8 @@ def threadFillOpList():
     while True:
         try:
             url = "http://tmi.twitch.tv/group/user/"+cfg.TWITCH_CHAN+"/chatters"
-            req = urllib2.Request(url, headers={"accept": "*/*"})
-            response = urllib2.urlopen(req).read()
+            req = urllib.request.Request(url, headers={"accept": "*/*"})
+            response = urllib.request.urlopen(req).read()
             if response.find("502 Bad Gateway") == -1:
                 cfg.oplist.clear()
                 data = json.loads(response)
@@ -345,13 +345,13 @@ def threadFillFollowerList():
             total = json_dict['_total']
             cursor=20
             while cursor < total:
-                r=requests.get(cfg.TWITCH_SUB_URL+"?limit=20&offset="+`cursor`,headers=cfg.TWITCH_SUB_HEADERS)
+                r=requests.get(cfg.TWITCH_SUB_URL+"?limit=20&offset="+repr(cursor),headers=cfg.TWITCH_SUB_HEADERS)
                 json_dict=json.loads(r.text)
                 response=[x['user']['name'] for x in json_dict['subscriptions'] if x['user']['name'] not in cfg.sublist]
                 cfg.sublist.extend(response)
                 cursor+=20
         except Exception as e:
-            print e
+            print(e)
         sleep(60)
             
 # Function isOP
@@ -376,7 +376,7 @@ def add_to_raffle(sock,user):
         #    num_entries=3
         for i in range(num_entries):
             CURR_RAFFLE.append(user)
-        chat(sock, user, "Thanks "+user+"! You have a "+`num_entries`+" in "+`len(CURR_RAFFLE)`+" chance of winning "+raffle_title+"...")
+        chat(sock, user, "Thanks "+user+"! You have a "+repr(num_entries)+" in "+repr(len(CURR_RAFFLE))+" chance of winning "+raffle_title+"...")
     else:
         chat(sock, user, user+" is already in the raffle!")
 
@@ -409,7 +409,7 @@ def raffle_draw(sock, user):
             follower="(who deserves their free things!)"
         chat(sock, user, "Congrats to "+draw+" "+follower+"... You've won "+raffle_title+"! (Now gently brush off the haters)")
     else:
-        print "Likely the opList is out of sync..."
+        print("Likely the opList is out of sync...")
 
 def raffle_stop(sock,user):
     global raffle_live,CURR_RAFFLE,raffle_title
@@ -417,14 +417,14 @@ def raffle_stop(sock,user):
         CURR_RAFFLE=[]
         raffle_title=""
         raffle_live=False
-        print "Raffle has stopped."
+        print("Raffle has stopped.")
         
 # Queue functions.
 def add_to_queue(sock,user):
     global viewer_queue
     if user not in viewer_queue:
         viewer_queue.append(user)
-        print viewer_queue
+        print(viewer_queue)
 
 # !pop_queue 3 would give the next 3 users in the queue.    
 def pop_queue(sock,user,n):
@@ -444,7 +444,7 @@ def get_queue(sock):
         chat_string="Playing next: "
         user_list=[]
         for x in range(min(3,len(viewer_queue))):
-            user_list.append(`x+1`+". "+viewer_queue[x])
+            user_list.append(repr(x+1)+". "+viewer_queue[x])
         chat_string+=", ".join(user_list)
         chat(sock, "crunkybot", chat_string)
     else:
@@ -493,10 +493,10 @@ def uptime(sock):
                 live_str=diff_str[0]+", "
                 time_idx=1
             hours=diff_str[time_idx].split(":")
-            live_str+=hours[0]+" hours and "+`int(hours[1])`+" minutes."
+            live_str+=hours[0]+" hours and "+repr(int(hours[1]))+" minutes."
             chat(sock,"crunkybot","Stream has been live for "+live_str)
             # "2017-08-14T15:45:17Z"
         else:
             chat(sock,"crunkybot","The stream isn't live :(.")
     except Exception as e:
-        print "Error in ",e
+        print("Error in ",e)
