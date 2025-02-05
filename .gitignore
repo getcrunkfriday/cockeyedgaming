@@ -100,3 +100,5 @@ ENV/
 # mypy
 .mypy_cache/
 crunkybot/config.py
+crunkybot/twitch/crunkycfg.py
+crunkybot/twitch/current_track.txt
