@@ -53,11 +53,15 @@ print("vid", dl_playlist_options)
 
 def get_vid_info(vid):
     with youtube_dl.YoutubeDL(info_options) as ydl:
+        print("getting vid info...")
         result=ydl.extract_info(vid,download=False)
+        print("result...")
         if result['duration'] > 420:
             return False
         id_tuple=ydl.prepare_filename(result)
+        print("ID tuple, ", id_tuple)
         vidid=id_tuple.split()[0]
+        print("vid ID", vidid)
         title=" ".join(id_tuple.split()[1:])
         return (vidid,title)
     return False

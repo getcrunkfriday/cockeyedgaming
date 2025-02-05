@@ -135,8 +135,11 @@ def process_song_request(sock,user,message):
     m=youtube_re.match(vid2)
     if m:
         try:
+            print("1")
             res=musicutils.get_vid_info(vid2)
+            print("Result", res)
             if res:
+                print("2")
                 (vidid,title)=(res[0],res[1])
                 chat(sock,"crunkybot",title+" requested by "+user+" added to the queue!")
                 return (vidid,title,vid2)
@@ -147,11 +150,17 @@ def process_song_request(sock,user,message):
             print("Exception",e)
     else:
         res=musicutils.youtube_search(message)
+        print("no match", res)
         try:
+            print("in block2")
             res2=musicutils.get_vid_info("https://www.youtube.com/watch?v="+res)
+            print("res2", res2)
             if res2:
+                print("1")
                 (vidid,title)=(res2[0],res2[1])
+                print("2", sock, title, user)
                 chat(sock,"crunkybot",title+" requested by "+user+" added to the queue!")
+                print("3")
                 return (vidid,title,"https://www.youtube.com/watch?v="+res)
             else:
                 chat(sock,"crunkybot","Video must be < 7 minutes long.")
@@ -278,7 +287,9 @@ def shoutout(sock,user,message):
 def chat(sock, user, msg, debug=False):
     msg=msg.replace("${username}",user)
     if not debug:
-        sock.send("PRIVMSG #{} :{}\r\n".format(cfg.TWITCH_CHAN, msg.encode('utf-8')))
+        print("attempting to send sock...", cfg.TWITCH_CHAN, msg, msg.encode('utf-8'))
+        sock.send("PRIVMSG #{} :{}\r\n".format(cfg.TWITCH_CHAN, msg).encode('utf-8'))
+        print("sent")
     else:
         print(msg)
 

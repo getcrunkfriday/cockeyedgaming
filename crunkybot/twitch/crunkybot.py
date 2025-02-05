@@ -179,7 +179,7 @@ def check_download_queue():
                 download=download_queue[d]
                 if download['request_type'] == 'sr':
                     t=download['thread']
-                    if not t.isAlive():
+                    if not t.is_alive():
                         current_request_user=download['user']
                         current_request_vid =download['vid']
                         current_request_vidid=download['vidid']
@@ -192,7 +192,7 @@ def check_download_queue():
                     complete_threads.append(d)
                 if download['request_type'] == 'sync_add_tracks':
                     t=download['thread']
-                    if not t.isAlive():
+                    if not t.is_alive():
                         for t2a in download['tracks']:
                             res,track_rid=db.add_track_to_playlist(t2a)
                         complete_threads.append(d)
